@@ -1,0 +1,1 @@
+ejs, express, multer, npm-run-all, tailwindcss, nodemon, sqlite

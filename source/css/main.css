@@ -1,0 +1,17 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Google Sans","Helvetica Neue",sans-serif;
+}
+
+#detail {
+  padding: 2px;
+}
+
+.container {
+  padding: 2px;
+  margin: 2px;
+  border: 1px solid #000;
+  border-radius: 5px;
+  word-wrap: break-word;
+}

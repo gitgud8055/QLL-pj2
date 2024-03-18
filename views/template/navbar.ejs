@@ -1,0 +1,99 @@
+<style>
+@media screen and (max-width: 768px) {
+  .main-content {
+    width: 0!important;
+  }
+}
+@media screen and (max-width: 512px) {
+  .navbar-toggle {
+    display: none;
+  }
+}
+#form-pass > div {
+  margin-bottom: 1rem;
+}
+</style>
+<nav class="navbar navbar-expand-lg navbar-light bg-light sticky top-0" style="z-index: 900;">
+  <div class="mr-auto flex flex-row items-center gap-2">
+    <div class="">
+      <button class="mx-3 flex items-center" id="content-tg">
+        <ion-icon name="menu-outline" style="font-size: 1.5rem;"></ion-icon>
+      </button>
+    </div>
+    <div class="navbar-toggle">
+      <span><%- title %></span>
+    </div>
+    <div class="">
+      <form class="form-inline my-2 my-lg-0 flex flex-row gap-1" id="search-form">
+        <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" id="search">
+        <button class="btn btn-outline-success my-2 my-sm-0" ><ion-icon name="search-outline"></ion-icon></button>
+      </form>
+    </div>
+  </div>
+  <div class="mr-2 cursor-pointer">
+    <img src= <%- link %> alt="" srcset="" class=" w-12 h-12 rounded-full" id="avatar">
+  </div>
+  <div class="absolute top-0" id="account" style="display: none; z-index: 900; width: 436px; height: 630px; right: 0px; margin-top: 60px; margin-right: 24px; min-height: 210px; max-height: calc(-81px + 100dvh); max-width: calc(-8px + 100vw);">
+    <iframe src="/api/account" frameborder="0" class="w-full h-full bg-slate-200 rounded-3xl"></iframe>
+  </div>
+</nav>
+<div class=" absolute top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] " style="transform: translate(-50%, -50%); border: 1px solid black; z-index: 899; display: none; " id="cp">
+    <div class="fw-bold fs-4 mt-2">Cập nhật mật khẩu của bạn</div>
+    <div class="fs-5">Nhập mật khẩu hiện tại và mật khẩu mới</div>
+    <div class="absolute top-0 right-0 off-pass" style="z-index: 899;">
+      <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
+    </div>
+    <form class="w-full px-4 mt-3" id="form-pass">
+      <div class="form-group">
+        <div>Mật khẩu hiện tại</div>
+        <input type="password" class="form-control" id="current" required>
+      </div>
+      <div class="form-group">
+        <div>Mật khẩu mới</div>
+        <input type="password" class="form-control" id="new" required>
+      </div>
+      <div class="form-group">
+        <div>Xác nhận mật khẩu mới</div>
+        <input type="password" class="form-control" id="check" required>
+      </div>
+    </form>
+    <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+      <button class="btn btn-primary" id="submit-cp">Done</button>
+      <button class="btn btn-normal off-pass">Hủy bỏ</button>
+    </div>
+</div>
+<button class="hidden" onclick="toggleall()" id="triggerer"></button>
+<script>
+  $("#content-tg").click(function() {
+    let cur = $(".main-content").first();
+    cur.css("width", cur.css("width") === "0px" ? "260px" : "0px");
+  });
+  function togglecp() {
+    $("#cp").toggle('hidden');
+  }
+  function toggleall() {
+    $("#account").toggle();
+    togglecp();
+  }
+  $(".off-pass").click(function() {
+    togglecp();
+  })
+  $("#avatar").click(function() {
+    $("#account").toggle();
+  });
+  $("#submit-cp").click(function() {
+    const change = {};
+    $("#form-pass input").each(function(i, item) {
+      change[$(item).attr("id")] = $(item).val();
+    })
+    fetch('/api/change-pass', {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(change)})
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Error: ${response.message}`);
+      }
+      return response.json();
+    }).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});;
+  });
+  
+</script>
+<script src="/source/js/navbar.js"></script>
