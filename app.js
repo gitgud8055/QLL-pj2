@@ -69,6 +69,30 @@ app.get('/account', log_authorize, function(req, res) {
   }
 });
 
+app.get('/account/:target', log_authorize, function(req, res) {
+  const targetID = req.params.target;
+  try {
+    db.serialize(function() {
+      let account;
+      db.all(`select * from account where id = ?`, [targetID],(e, rows) => {
+        if (e || rows.length !== 1) {
+          res.status(503).json({message: "Không tồn tại user này"});
+        }
+        account = rows[0];
+      });
+      db.all(`select * from information where id = ?`, [targetID], (e, rows) => {
+        if (e || rows.length !== 1) {
+          res.status(503).json({message: "Something went wrong"});
+        }
+        res.render(`${__dirname}/views/account-info.ejs`, {root: __dirname, title: "", link: `/source/image/${account.avatar}`, username: account.username,
+        name: rows[0].name, phone_number: rows[0].phone, id: rows[0].id, email: rows[0].email, role: rows[0].role, position: rows[0].pos});
+      })
+    });
+  } catch (e) {
+    res.status(503).json({message: e.message});
+  }
+}); 
+
 app.post('/api/login', async function(req, res) {
   const data = req.body;
   try {

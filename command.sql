@@ -22,3 +22,20 @@ create table information (
   role text, 
   pos text
 );
+
+create table class (
+  class_id text PRIMARY key, 
+  class_name text,
+  course_id text
+);
+
+create table learn (
+  id text not NULL,
+  class_id text not NULL,
+  gr_number text
+);
+
+create table teach (
+  id text not NULL,
+  class_id text not NULL
+);
