@@ -16,11 +16,11 @@ create table account (
 
 create table information (
   id text PRIMARY key,
-  name text ,
-  phone text,
-  email text, 
-  role text, 
-  pos text
+  name text default '',
+  phone text default '',
+  email text default '', 
+  role text default '', 
+  pos text default ''
 );
 
 create table class (

@@ -1,9 +1,4 @@
 <style>
-@media screen and (max-width: 768px) {
-  .main-content {
-    width: 0!important;
-  }
-}
 @media screen and (max-width: 512px) {
   .navbar-toggle {
     display: none;
@@ -66,8 +61,30 @@
 <script>
   $("#content-tg").click(function() {
     let cur = $(".main-content").first();
-    cur.css("width", cur.css("width") === "0px" ? "260px" : "0px");
+    let now = cur.css("width") === "0px";
+    console.log(cur.css("width"));
+    cur.css("width", now ? "260px" : "0px");
+    cur.css("visibility", now ? "visible" : "hidden");
   });
+  media_query(`(max-width: 768px)`, function(x) {
+    console.log("true");
+    let cur = $(".main-content").first();
+    if (x.matches) {
+      cur.css("width", "0px");
+      cur.css("visibility", "hidden");
+      cur.css("position", "absolute");
+      cur.css("z-index", "949");
+      $("#x-button").show();
+    }
+    else {
+      cur.css("width", "260px");
+      cur.css("visibility", "visible");
+      cur.css("position", "");
+      cur.css("z-index", "");
+      $("#x-button").hide();
+    }
+  });
+
   function togglecp() {
     $("#cp").toggle('hidden');
   }

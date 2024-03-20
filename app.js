@@ -131,6 +131,10 @@ app.get('/api/account', log_authorize, function(req, res) {
   res.render(`${__dirname}/views/account.ejs`, {root: __dirname, username: req.session.username, link: `/source/image/${req.session.avatar}`});
 });
 
+app.get('/class', log_authorize, function(req, res) {
+  res.render(`${__dirname}/views/class.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách lớp học'});
+});
+
 app.post('/api/book', function(req, res) {
   const data = req.body;
   try {
