@@ -132,7 +132,39 @@ app.get('/api/account', log_authorize, function(req, res) {
 });
 
 app.get('/class', log_authorize, function(req, res) {
-  res.render(`${__dirname}/views/class.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách lớp học'});
+  try {
+    db.all(`select c.class_id as cid, c.class_name as cn, c.course_id as course from (select * from learn where id = ?) l join class c on l.class_id = c.class_id`, [req.session.key], (e, rows) => {
+      if (e) {
+        res.status(504).json({message: e.message});
+      }
+      res.render(`${__dirname}/views/class.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách lớp học',
+      data: rows});
+    });
+  } catch(e) {
+    res.status(504).json({message: e.message});
+  }
+});
+
+app.get('/class/:classid', log_authorize, function(req, res) {
+  const id = req.params.classid;
+  try {
+    db.serialize(function() {
+      db.all(`select * from class where class_id = ?`, [id], (e, rows) => {
+        if (e || rows.length !== 1) {
+          res.status(505).json({message: "Something went wrong"});
+        }
+      });
+      db.all(`select * from information where id in (select * from learn where class_id = ?)`, [id], (e, rows) => {
+        if (e) {
+          res.status(505).json({message: "Something went wrong"});
+        }
+        res.render(`${__dirname}/views/class-info.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: `Lớp học`, 
+        data: rows});
+      });
+    });
+  } catch (e) {
+    res.status(505).json({message: e.message});
+  }
 });
 
 app.post('/api/book', function(req, res) {

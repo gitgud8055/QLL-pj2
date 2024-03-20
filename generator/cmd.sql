@@ -8,4 +8,4 @@ insert into account(id, username, password, authority) VALUES
 ('GV1', 'gv1', '123', 'teacher'),
 ('GV2', 'gv2', '123', 'teacher');
 
-insert into information VALUES 
+
