@@ -12,15 +12,32 @@
 			<%- include(root + '/views/template/navbar.ejs') %>
 			<div class=" p-1 mx-2 mt-2 h-full  " style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary">
-          Danh sách lớp học hiện có
+          Danh sách giáo viên
+        </div>
+				<div class="table-responsive ">
+					<table class="table table-bordered" id="">
+						<thead>
+							<tr>
+								<th >Tên</th>
+								<th>Vị trí</th>
+								<th>Công tác</th>
+							</tr>
+						</thead>
+						<tbody id="data-tableT">
+              
+						</tbody>
+					</table>
+				</div>
+        <div class=" px-2 py-2 fw-bold text-primary">
+          Danh sách thành viên
         </div>
 				<div class="table-responsive ">
 					<table class="table table-bordered" id="dataTable">
 						<thead>
 							<tr>
-								<th >Mã lớp</th>
-								<th>Tên lớp</th>
-								<th>Mã học phần</th>
+								<th >Tên</th>
+								<th>Vị trí</th>
+								<th>Công tác</th>
 							</tr>
 						</thead>
 						<tbody id="data-table">
@@ -31,20 +48,22 @@
 			</div>
 		</div>
 	</div>
-  <tr class=" hover:bg-slate-500"></tr>
   <script>
-    function add_class(cid, cn, course) {
-      $("#data-table").append(`<tr id="Row${cid}">
-        <td>${cid}</td>
-        <td>${cn}</td>
-        <td>${course}</td>
+    function add_class(name, role, position, id, flag=false) {
+      $(!flag ? "#data-table" : "#data-tableT").append(`<tr id="Row${id}">
+        <td>${name}</td>
+        <td>${role}</td>
+        <td>${position}</td>
       </tr>`);
-      $(`#Row${cid}`).click(function() {
-        window.location.href += `/${cid}`;
+      $(`#Row${id}`).click(function() {
+        window.location.href = `/account/${id}`;
       });
     }
-    <% for (let i = 0; i < data.length; i++) { %>
-    add_class('<%- data[i].cid %>', '<%- data[i].cn %>', '<%- data[i].course %>');
+    <% for (let i = 0; i < dataS.length; i++) { %>
+    add_class('<%- dataS[i].name %>', '<%- dataS[i].role %>', '<%- dataS[i].position %>', '<%- dataS[i].id %>', false);
+    <% } %>
+    <% for (let i = 0; i < dataT.length; i++) { %>
+      add_class('<%- dataT[i].name %>', '<%- dataT[i].role %>', '<%- dataT[i].position %>', '<%- dataT[i].id %>', true);
     <% } %>
     
     var  tableHead = document.getElementById("dataTable").getElementsByTagName('thead')[0];

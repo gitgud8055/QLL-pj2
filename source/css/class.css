@@ -1,3 +1,4 @@
-#data-table tr:hover > td {
+#data-table tr:hover > td,
+#data-tableT tr:hover > td {
     background-color: rgb(222, 226, 230);
 }

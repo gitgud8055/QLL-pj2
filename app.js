@@ -133,7 +133,7 @@ app.get('/api/account', log_authorize, function(req, res) {
 
 app.get('/class', log_authorize, function(req, res) {
   try {
-    db.all(`select c.class_id as cid, c.class_name as cn, c.course_id as course from (select * from learn where id = ?) l join class c on l.class_id = c.class_id`, [req.session.key], (e, rows) => {
+    db.all(`select c.class_id as cid, c.class_name as cn, c.course_id as course from (select class_id from learn where id = ? union select class_id from teach where id = ?) l join class c on l.class_id = c.class_id`, [req.session.key, req.session.key], (e, rows) => {
       if (e) {
         res.status(504).json({message: e.message});
       }
@@ -147,6 +147,7 @@ app.get('/class', log_authorize, function(req, res) {
 
 app.get('/class/:classid', log_authorize, function(req, res) {
   const id = req.params.classid;
+  console.log(id);
   try {
     db.serialize(function() {
       db.all(`select * from class where class_id = ?`, [id], (e, rows) => {
@@ -154,12 +155,20 @@ app.get('/class/:classid', log_authorize, function(req, res) {
           res.status(505).json({message: "Something went wrong"});
         }
       });
-      db.all(`select * from information where id in (select * from learn where class_id = ?)`, [id], (e, rows) => {
+      var student;
+      db.all(`select id, name, role, pos as position from information where id in (select id from learn where class_id = ?)`, [id], (e, rows) => {
         if (e) {
           res.status(505).json({message: "Something went wrong"});
         }
+        student = rows;
+      });
+      db.all(`select id, name, role, pos as position from information where id in (select id from teach where class_id = ?)`, [id], (e, rows) => {
+        if (e) {
+          res.status(505).json({message: "Something went wrong"});
+        }
+        console.log(rows);
         res.render(`${__dirname}/views/class-info.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: `Lớp học`, 
-        data: rows});
+        dataS: student, dataT: rows});
       });
     });
   } catch (e) {
