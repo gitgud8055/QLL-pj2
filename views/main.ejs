@@ -38,13 +38,97 @@
 		
 						</tbody>
 					</table>
-					<div class="flex flex-col max-w-96" id = "detail">	
+					<div class="w-full flex px-1">
+						<div class="fw-bold fs-5 mr-auto" id="LKJfwaufLj"> </div>
+						<button class="btn btn-light ml-auto" id="cTrigger"><ion-icon name="add-outline" style="font-size: 1rem;"></ion-icon></button>
+					</div>
+					<div class="flex flex-col" id = "detail">	
 						
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	<div class=" fixed top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="cc">
+    <div class="fw-bold fs-4 mt-2">Thông tin lịch</div>
+    <div class="fs-5">Có thể thêm hoặc sửa đổi lịch trình đã có</div>
+    <div class="absolute top-0 right-0 off-c" style="z-index: 899;">
+      <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
+    </div>
+    <form class="w-full px-4 mt-3" id="form-c">
+      <div class="form-group">
+        <div>Ngày hiện tại</div>
+        <input type="date" class="form-control" name="cdate" id="cdate">
+      </div>
+      <div class="form-group">
+        <div>Thời điểm bắt đầu</div>
+        <input type="time" class="form-control" name="stime" id="stime">
+      </div>
+      <div class="form-group">
+        <div>Thời điểm kết thúc</div>
+        <input type="time" class="form-control" name="etime" id="etime">
+      </div>
+			<div class="form-group">
+				<div>Nội dung</div>
+				<textarea name="desc" id="desc" cols="" rows="6" class="w-full rounded py-1 px-2 form-control" value=""></textarea>
+				<div id="old" class="flex flex-row flex-wrap"></div>
+				<input type="file" class=" hidden" id="file-input" name="file-document" multiple>
+				<button type="button" class="mt-2" onclick="document.getElementById('file-input').click()"><ion-icon name="document-outline" style="font-size: 1.5rem;"></ion-icon></button>
+				<div id="file-preview" class=" flex flex-wrap flex-row"></div>
+				<div id="fdWjfkwiA"></div>
+			</div>
+			<input name="mid" id="mid" type="number" class="hidden">
+    </form>
+    <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+      <button class="btn btn-primary" id="submit-cc">Done</button>
+      <button class="btn btn-normal off-c">Hủy bỏ</button>
+    </div>
+	</div>
+	<script>
+		$(".off-c").click(() => {$("#cc").hide();});
+		$("#cTrigger").click(() => {$("#cc").show(); $("#cdate, #stime, #etime, #desc, #mid, #file-input").val(""); $("#file-preview, #old").html("");});
+		const dt = new DataTransfer();
+		$("#file-input").change(function(event) {
+			console.log("chage");
+			const file = event.target.files;
+			const pr = $("#file-preview");
+			for (let i = 0; i < file.length; i++) {
+				dt.items.add(file[i]);
+				pr.append(`<div class="m-1 px-1 rounded" style="border: 1px solid black;">${file[i].name}<button type="button" data-id="${file[i].name}"><ion-icon name="close-outline"></ion-icon></button></div>`);
+			}
+			this.files = dt.files;
+			$(`#file-preview button`).off('click');
+			$(`#file-preview button`).click(function() {
+				const target_name = $(this).attr('data-id');
+				//$(this).parent().remove();
+				for (let n = 0; n < dt.items.length; n++) {
+					if (target_name === dt.items[n].getAsFile().name) {
+						$(`#file-preview div`).eq(n).remove();
+						dt.items.remove(n);
+						console.log(n);
+						break;
+					}
+				}
+				document.getElementById("file-input").files = dt.files;
+			});
+		});
+		function bratuSLegs() {
+			const formData = new FormData(document.getElementById("form-c"));
+			for (const [n, v] of formData.entries()) {
+				console.log(n, v);
+			}
+			console.log(formData);
+			fetch('/api/change-c', {method: "POST", body: formData})
+			.then(async function(response) {
+				if (!response.ok) {
+					let x = await response.json();
+					throw new Error(`Error: ${x.message}`);
+				}
+				return response.json();
+			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});;
+		}
+		$("#submit-cc").click(bratuSLegs);
+	</script>
 	<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 	<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </body>

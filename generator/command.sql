@@ -1,10 +1,13 @@
 create table calendar(
+  Mid integer primary key autoincrement,
+  id text not NULL,
   date text not NULL,
   start text not NULL,
   end text not NULL,
-  author text,
   note text
 );
+create index calendar_id on calendar(id);
+create index calendar_date on calendar(date);
 
 create table account (
   id text PRIMARY key, 
@@ -39,3 +42,11 @@ create table teach (
   id text not NULL,
   class_id text not NULL
 );
+
+create table fileData (
+  id text,
+  PathName text,
+  url text
+);
+
+create index filedata_url on fileData(url)

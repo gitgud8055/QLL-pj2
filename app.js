@@ -1,7 +1,6 @@
 const express = require('express');
 const url = require('url');
 const path = require('path');
-const multer = require('multer');
 const parser = require('body-parser');
 const ejs = require('ejs');
 const sqlite3 = require('sqlite3').verbose();
@@ -13,26 +12,21 @@ const db = new sqlite3.Database('data.db');
 const { spawnSync, spawn} = require('child_process');
 const { error, log } = require('console');
 
-const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, `${__dirname}/source/image/`);
-  },
-  filename: function(req, file, cb) {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
-});
-const upload = multer({storage: storage});
+const ui = require('./module/upload-image');
+const uf = require('./module/upload-file');
+const {deleteFile} = require('./module/delete-uploaded')
 
 app.use(parser.urlencoded({extended: true}));
 app.use(parser.json());
 app.use(session({
-  secret: 'Welcome to a new hentai episode',
+  secret: 'Welcome to a new 210 episode',
   resave: false,
   saveUninitialized: true
 }));
 
 app.use('/source', express.static('source'));
 app.use('/views', express.static('views'));
+app.use('/uf', express.static('user-file'))
 
 const check_logged = (req) => {
   return req.session && req.session.logged;
@@ -133,19 +127,33 @@ app.get('/api/account', log_authorize, function(req, res) {
 
 app.get('/class', log_authorize, function(req, res) {
   try {
-    db.all(`select c.class_id as cid, c.class_name as cn, c.course_id as course from (select class_id from learn where id = ? union select class_id from teach where id = ?) l join class c on l.class_id = c.class_id`, [req.session.key, req.session.key], (e, rows) => {
-      if (e) {
-        res.status(504).json({message: e.message});
-      }
-      res.render(`${__dirname}/views/class.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách lớp học',
-      data: rows});
-    });
-  } catch(e) {
+    if (req.session.authority === "student") {
+      db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id from learn where id = ?) l 
+      join class c on l.class_id = c.class_id join teach t on c.class_id = t.class_id join information i where i.id = t.id`, 
+      [req.session.key], (e, rows) => {
+        if (e) {
+          res.status(504).json({message: e.message});
+        }
+        res.render(`${__dirname}/views/class-student.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',data: rows});
+      });
+    }
+    else if (req.session.authority === "teacher") {
+      db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
+      from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
+      [req.session.key], (e, rows) => {
+        if (e) {
+          res.status(504).json({message: e.message});
+        }
+        res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',data: rows});
+      });
+    }
+  }
+  catch(e) {
     res.status(504).json({message: e.message});
   }
 });
 
-app.get('/class/:classid', log_authorize, function(req, res) {
+/*app.get('/class/:classid', log_authorize, function(req, res) {
   const id = req.params.classid;
   console.log(id);
   try {
@@ -174,26 +182,92 @@ app.get('/class/:classid', log_authorize, function(req, res) {
   } catch (e) {
     res.status(505).json({message: e.message});
   }
-});
+});*/
 
 app.post('/api/book', function(req, res) {
   const data = req.body;
   try {
-    db.serialize(() => {
-      db.all(`select * from calendar where date like '%${data.year}-${data.month}-%'`, (err, rows) => {
+    new Promise(function(suc, rej) {
+      db.all(`select * from calendar where id = ? and date like '%${data.year}-${data.month.toString().padStart(2, "0")}-%'`, [req.session.key],(err, rows) => {
+        if (err) {
+          rej(err.message);
+        }
         rows.forEach(function(v) {
           v.date = v.date.split('-')[2];
         });
         res.json(rows);
+        suc();
       });
     });
   } catch (err) {
-    res.status(500).json({message: err.message});
+    res.status(500).json({message: err});
   }
 });
 
+app.get('/api/book/:idx', log_authorize, function(req, res) {
+  const data = req.params.idx;
+  console.log(data);
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.all(`select id from calendar where mid = ?`, [data], (e, rows) => {
+          if (e || rows.length !== 1 || rows[0].id !== req.session.key) {
+            console.error(e.message);
+            rej("Invalid");
+          }
+          res();
+        });
+      });
+      await new Promise((suc, rej) => {
+        db.all(`select pathname as name, url as path from filedata where id = ?`, [data], (e, rows) => {
+          if (e) {
+            console.error(e.message);
+            rej("Lỗi database");
+          }
+          res.json({data: rows});
+          suc();
+        });
+      });
+    } catch (err) {
+      res.status(507).json({message: err});
+    }
+  });
+});
+
+app.get('/api/download', log_authorize, function(req, res) {
+  return res.download(`./user-file/${req.query.l}`, req.query.n);
+  const data = req.params.url;
+  const idx = req.query.id;
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.all(`select id from calendar where mid = ?`, [data.id], (e, rows) => {
+          if (e || rows.length !== 1 || rows[0].id !== req.session.key) {
+            console.error(e.message);
+            rej("Invalid");
+          }
+          res();
+        });
+      });
+      await new Promise((suc, rej) => {
+        db.all(`select pathname as name, url as path from filedata where id = ?`, [data], (e, rows) => {
+          if (e) {
+            console.error(e.message);
+            rej("Lỗi database");
+          }
+          res.json({data: rows});
+          suc();
+        });
+      });
+    } catch (err) {
+      res.status(507).json({message: err});
+    }
+  });
+});
+
 const convert = {'name': 'name', 'phone_number': 'phone', 'email': 'email', 'role': 'role', 'position': 'pos'};
-app.post('/api/update-profile', log_authorize, upload.single('image'),function(req, res, next) {
+app.post('/api/update-profile', log_authorize, ui.upload.single('image'),function(req, res, next) {
+  console.log(req.body);
   const data = JSON.parse(req.body.data);
   for (const [key, value] of Object.entries(data)) {
     if (!(key in convert)) {
@@ -225,30 +299,138 @@ app.post('/api/update-profile', log_authorize, upload.single('image'),function(r
 app.post('/api/change-pass', log_authorize, function(req, res) {
   const data = req.body;
   if (!data['current'] || !data['new'] || !data['check']) {
-    return res.json({message: "Đầu vào bị lỗi"});
+    return res.status(505).json({message: "Đầu vào bị lỗi"});
   }
   if (data['new'] !== data['check']) {
-    return res.json({message: "Mật khẩu mới không khớp"});
+    return res.status(505).json({message: "Mật khẩu mới không khớp"});
   }
   if (data['new'] === data['current']) {
-    return res.json({message: "Mật khẩu mới phải khác mật khẩu cũ"});
+    return res.status(505).json({message: "Mật khẩu mới phải khác mật khẩu cũ"});
   }
-  db.serialize(function() {
-    db.all(`select password from account where id = ${req.session.key}`, (e, rows) => {
-      if (e) {
-        return res.json({message: e.message});
-      }
-      if (rows[0].password !== data['current']) {
-        return res.json({message: "Mật khẩu cũ không đúng"});
-      }
-    });
-    db.run(`update account set password = ? where id = ${req.session.key}`, [data['new']], (e) => {
-      if (e) {
-        return res.json({message: e.message});
-      }
-    });
-    return res.json({message: "Thành công"});
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.all(`select password from account where id = ${req.session.key}`, (e, rows) => {
+          if (e) {
+            rej(e.message);
+          }
+          if (rows[0].password !== data['current']) {
+            rej("Mật khẩu cũ không đúng");
+          }
+          res();
+        });
+      });
+      await new Promise((res, rej) => {
+        db.run(`update account set password = ? where id = ${req.session.key}`, [data['new']], (e) => {
+          if (e) {
+            reject(e.message);
+          }
+          res();
+        });
+      });
+      res.json({message: "Success"});
+    }
+    catch (e) {
+      res.status(505).json({message: e});
+    }
   });
+});
+
+app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),function(req, res) {
+  const data = req.body;
+  console.log("backend",data);
+  // console.log(req.files);
+  if (data.cdate && data.stime && data.etime && data.desc) {
+    if (data.stime > data.etime) {
+      deleteFile(req.files);
+      return res.status(506).json({message: "Thời điểm bắt đầu và kết thúc không hợp lệ"});
+    }
+    if (data.mid) {
+      db.serialize(async function() {
+        try {
+          await new Promise((res, rej) => {
+            db.run(`update calendar set date = ?, start = ?, end = ?, note = ? where mid = ?`, [data.cdate, data.stime, data.etime, data.desc, data.mid], (e) => {
+              if (e) {
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+          if (data.pl && data.pl.length > 0) {
+            await new Promise((res, rej) => {
+              db.run(`delete from filedata where id = ? and url in (?)`, [data.mid, data.pl.join(", ")], (e) => {
+                if (e) {
+                  rej("Lỗi database");
+                }
+                res();
+              });
+            });
+          }
+          if (req.files.length > 0) {
+            await new Promise((res, rej) => {
+              db.run(`insert into filedata values ${`(${data.mid}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+                if (e) {
+                  console.error(e.message);
+                  rej("Lỗi database");
+                }
+                res();
+              });
+            });
+          }
+          res.json({message: "Success"});
+        } catch (e) {
+          deleteFile(req.files);
+          res.status(506).json({message: e});
+        }
+
+      });
+    } else {
+      db.serialize(async function() {
+        try {
+          await new Promise((res, rej) => {
+            db.run(`insert into calendar(id, date, start, end, note) values (?, ?, ?, ?, ?)`, [req.session.key, data.cdate, data.stime, data.etime, data.desc], (err) => {
+              if (err) {
+                console.error(err.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+          if (req.files.length > 0) {
+            let idx;
+            await new Promise((res, rej) => {
+              db.all(`select mid from calendar where mid = last_insert_rowid()`, (e, rows) => {
+                if (e || rows.length !== 1) {
+                  console.error(e.message);
+                  rej("Lỗi database 400");
+                }
+                idx = rows[0].Mid;
+                res();
+              });
+            });
+            console.log(idx);
+            await new Promise((res, rej) => {
+              db.run(`insert into filedata values ${`(${idx}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+                if (e) {
+                  console.error(e.message);
+                  rej("Lỗi database");
+                }
+                res();
+              });
+            });
+          }
+          res.json({message: "Success"});
+        } catch (e) {
+          deleteFile(req.files);
+          res.status(506).json({message: e});
+        }
+      });
+    }
+  }
+  else {
+    deleteFile(req.files);
+    return res.status(506).json({message: "Thông tin không hợp lệ"});
+  }
 });
 
 app.post('/api/search', async function(req, res) {

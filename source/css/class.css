@@ -2,3 +2,12 @@
 #data-tableT tr:hover > td {
     background-color: rgb(222, 226, 230);
 }
+
+#title-list ~ *,
+#addJaiuAjw ~ * {
+    display: none;
+}
+
+.RtkAjwQi {
+    transform: rotate(180deg);
+}

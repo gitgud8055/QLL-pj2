@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<head>
+	<%- include(root + '/views/template/header.ejs') %>
+  <script src="/source/js/class.js"></script>
+  <link rel="stylesheet" href="/source/css/class.css">
+</head>
+
+<body>
+	<div class="flex h-full w-full ">
+		<%- include(root + '/views/template/content.ejs') %> 
+		<div class=" h-full max-w-full flex-1">
+			<%- include(root + '/views/template/navbar.ejs') %>
+      <style>
+        #form-c > div {
+          margin-bottom: 0.5rem;
+        }		
+      </style>
+      <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+        <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="addJaiuAjw">
+          <div class="mr-auto">
+            Đặt lịch hẹn
+          </div>
+          <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
+        </div>
+        <div>
+          <form class="w-full px-4 mt-3" id="form-c">
+            <div class="form-group">
+              <div>Thời điểm bắt đầu - kết thúc</div>
+              <button type="button" class="btn btn-outline-primary" id="add-date-time"><ion-icon name="add-outline"></ion-icon></button>
+              <div class="w-full flex flex-wrap" id="WKjqoIuxJns">
+                
+              </div>
+            </div>
+            <div class="form-group">
+              <div>Nội dung</div>
+              <textarea name="desc" id="desc" cols="" rows="6" class="w-full rounded py-1 px-2 form-control" value=""></textarea>
+              <input type="file" class=" hidden" id="file-input" name="file-document" multiple>
+              <button type="button" class="mt-2" onclick="document.getElementById('file-input').click()"><ion-icon name="document-outline" style="font-size: 1.5rem;"></ion-icon></button>
+              <div id="file-preview" class=" flex flex-wrap flex-row"></div>
+            </div>
+            <input name="mid" id="mid" type="number" class="hidden">
+          </form>
+          <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+            <button class="btn btn-primary" id="submit-cc">Done</button>
+            <button class="btn btn-normal off-c">Hủy bỏ</button>
+          </div>
+        </div>
+      </div>
+
+			<div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+        <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="title-list">
+          <div class="mr-auto">
+            Danh sách sinh viên
+          </div>
+          <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
+        </div>
+        <div class="table-responsive ">
+          <table class="table table-bordered" id="dataTable">
+            <thead>
+              <tr>
+                <th >Tên giảng viên</th>
+                <th>Mã lớp</th>
+                <th>Tên lớp</th>
+                <th>Mã học phần</th>
+                <th>Email</th>
+              </tr>
+            </thead>
+            <tbody id="data-table">
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+		</div>
+	</div>
+  <script>
+    const dt = new DataTransfer();
+		$("#file-input").change(function(event) {
+			console.log("chage");
+			const file = event.target.files;
+			const pr = $("#file-preview");
+			for (let i = 0; i < file.length; i++) {
+				dt.items.add(file[i]);
+				pr.append(`<div class="m-1 px-1 rounded" style="border: 1px solid black;">${file[i].name}<button type="button" data-id="${file[i].name}"><ion-icon name="close-outline"></ion-icon></button></div>`);
+			}
+			this.files = dt.files;
+      $(`#file-preview button`).off('click');
+			$(`#file-preview button`).click(function() {
+				const target_name = $(this).attr('data-id');
+				//$(this).parent().remove();
+				for (let n = 0; n < dt.items.length; n++) {
+					if (target_name === dt.items[n].getAsFile().name) {
+						$(`#file-preview div`).eq(n).remove();
+						dt.items.remove(n);
+						break;
+					}
+				}
+				document.getElementById("file-input").files = dt.files;
+			});
+		});
+		function bratuSLegs() {
+			const formData = new FormData(document.getElementById("form-c"));
+			for (const [n, v] of formData.entries()) {
+				console.log(n, v);
+			}
+			console.log(formData);
+      return ;
+			fetch('/api/change-c', {method: "POST", body: formData})
+			.then(async function(response) {
+				if (!response.ok) {
+					let x = await response.json();
+					throw new Error(`Error: ${x.message}`);
+				}
+				return response.json();
+			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});;
+		}
+		$("#submit-cc").click(bratuSLegs);
+  </script>
+  <script>
+    $("#title-list").click(function() {
+      $("#title-list ~ *").toggle();
+      $("#title-list ion-icon").toggleClass("RtkAjwQi");
+    });
+    $("#addJaiuAjw").click(function() {
+      $("#addJaiuAjw ~ *").toggle();
+      $("#addJaiuAjw ion-icon").toggleClass("RtkAjwQi");
+    });
+    $("#add-date-time").click(function() {
+      $("#WKjqoIuxJns").append(`<div class="w-full flex justify-between my-1" >
+        <input type="datetime-local" class="form-control" name="stime[]" style=" width: 47%;">
+        <input type="datetime-local" class="form-control" name="etime[]" style=" width: 47%">
+        <button type="button" class="btn btn-outline-danger" onclick="$(this).parent().remove();"><ion-icon name="trash-outline"></ion-icon></button>
+      </div>`);
+    });
+    $("#add-date-time").click();
+  </script>
+  <script>
+    function add_class(name, cid, cn, course, role, position, id) {
+      $("#data-table").append(`<tr >
+        <td id="Row${id}">${name}</td
+        <td>${cid}</td>
+        <td>${cn}</td>
+        <td>${course}</td>
+        <td>${role}</td>
+        <td>${position}</td>
+      </tr>`);
+      $(`#Row${id}`).click(function() {
+        event.stopPropagation();
+        window.location.href = `/account/${id}`;
+      });
+    }
+    <% for (let i = 0; i < data.length; i++) { %>
+      add_class('<%- data[i].name %>', '<%- data[i].cid %>', '<%- data[i].cn %>', '<%- data[i].course %>', '<%- data[i].role %>', '<%- data[i].position %>','<%- data[i].id %>');
+      <% } %>
+    $("#data-table tr").click(function() {
+      $(this).toggleClass("table-primary");
+    });
+    let SelectorAllElement = false;
+    $("#data-table tr").mouseover(function(event) {
+      if (SelectorAllElement) {
+        $(this).click();
+      }
+    });
+    $(document).keydown((event) => {
+      if (event.key === "Shift") {
+        SelectorAllElement = !SelectorAllElement;
+      }
+    });
+    
+    var  tableHead = document.getElementById("dataTable").getElementsByTagName('thead')[0];
+    var list_name = tableHead.querySelectorAll('th');
+    var finale = "";
+    number_column = list_name.length;
+    for (let i = 0; i < number_column; i++) {
+      finale += `<th> <input type="text" id="Filter${i}" placeholder="Filter" class="w-full"> </th>`;
+    }
+    tableHead.innerHTML += `<tr>${finale} </tr>`;
+    for (let i = 0; i < list_name.length; i++) {
+      document.getElementById(`Filter${i}`).addEventListener("keyup", function () {
+        FilterRemaster();
+      });
+    }
+    function FilterRemaster() {
+      var table = document.getElementById("dataTable");
+      var tr = table.getElementsByTagName("tr");
+      var input = new Array(number_column);
+      for (let i = 0; i < number_column; i++) {
+        input[i] = document.getElementById(`Filter${i}`).value.toUpperCase();
+      }
+      var TextValue;
+      for (let i = 0; i < tr.length; i++) {
+        td = tr[i].getElementsByTagName('td');
+        var flag = true;
+        for (let j = 0; j < number_column; j++) {
+          if (td[j]) {
+            if (td[j].querySelector('input')) {
+              TextValue = td[j].querySelector('input').value;
+            }
+            else {
+              TextValue = td[j].textContent || td[j].innerText;
+            }
+            if (TextValue.toUpperCase().indexOf(input[j]) == -1) {
+              flag = false;
+              break;
+            }
+          }
+        }
+        if (flag) {
+          tr[i].style.display = "";
+        }
+        else {
+          tr[i].style.display = "none";
+        }
+      }
+    }
+  </script>
+	<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+	<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
