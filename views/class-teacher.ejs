@@ -38,7 +38,6 @@
               <button type="button" class="mt-2" onclick="document.getElementById('file-input').click()"><ion-icon name="document-outline" style="font-size: 1.5rem;"></ion-icon></button>
               <div id="file-preview" class=" flex flex-wrap flex-row"></div>
             </div>
-            <input name="mid" id="mid" type="number" class="hidden">
           </form>
           <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
             <button class="btn btn-primary" id="submit-cc">Done</button>
@@ -100,12 +99,16 @@
 		});
 		function bratuSLegs() {
 			const formData = new FormData(document.getElementById("form-c"));
+      $("#data-table tr").each(function(i, item) {
+        if ($(item).hasClass("table-primary")) {
+          formData.append('target[]', $(item).find("td").eq(0).attr('id'));
+        }
+      });
 			for (const [n, v] of formData.entries()) {
 				console.log(n, v);
 			}
 			console.log(formData);
-      return ;
-			fetch('/api/change-c', {method: "POST", body: formData})
+			fetch('/api/set-date', {method: "POST", body: formData})
 			.then(async function(response) {
 				if (!response.ok) {
 					let x = await response.json();
@@ -127,8 +130,8 @@
     });
     $("#add-date-time").click(function() {
       $("#WKjqoIuxJns").append(`<div class="w-full flex justify-between my-1" >
-        <input type="datetime-local" class="form-control" name="stime[]" style=" width: 47%;">
-        <input type="datetime-local" class="form-control" name="etime[]" style=" width: 47%">
+        <input type="datetime-local" class="form-control" name="time[]" style=" width: 47%;">
+        <input type="datetime-local" class="form-control" name="time[]" style=" width: 47%">
         <button type="button" class="btn btn-outline-danger" onclick="$(this).parent().remove();"><ion-icon name="trash-outline"></ion-icon></button>
       </div>`);
     });
@@ -137,14 +140,14 @@
   <script>
     function add_class(name, cid, cn, course, role, position, id) {
       $("#data-table").append(`<tr >
-        <td id="Row${id}">${name}</td
+        <td id="${id}">${name}</td
         <td>${cid}</td>
         <td>${cn}</td>
         <td>${course}</td>
         <td>${role}</td>
         <td>${position}</td>
       </tr>`);
-      $(`#Row${id}`).click(function() {
+      $(`#${id}`).click(function() {
         event.stopPropagation();
         window.location.href = `/account/${id}`;
       });

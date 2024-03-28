@@ -138,13 +138,97 @@ app.get('/class', log_authorize, function(req, res) {
       });
     }
     else if (req.session.authority === "teacher") {
-      db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
-      from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
-      [req.session.key], (e, rows) => {
-        if (e) {
-          res.status(504).json({message: e.message});
+      db.serialize(async function() {
+        try {
+          let data;
+          await new Promise((res, rej) => {
+            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
+            from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
+            [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              data = rows;
+              res();
+            });
+          });
+          let waiting, pending;
+          await new Promise((res, rej) => {
+            db.all(`select idx from date_set where id_owner = ?`, [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              waiting = Array.from(rows, (x) => x.idx);
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select idx from date_target where id = ?`, [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              pending = Array.from(rows, (x) => x.idx);
+              res();
+            });
+          });
+          let total = waiting.concat(pending).toString();
+          let date_info = {};
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_set where idx in (?)) ds 
+            join (select id, name from information) i on ds.id_owner = i.id`, 
+            [total], (e, rows) => {
+              if (e) {
+                console.log(e.message);
+                rej("Lỗi database");
+              }
+              rows.forEach((x) => {
+                date_info[x.idx] = x;
+              });
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from date_book where idx in (?)`,
+            [total], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              rows.forEach((x) => {
+                if (!('date' in date_info[x.idx])) {
+                  date_info[x.idx].date = [];
+                }
+                date_info[x.idx].date.push([x.start, x.end]);
+              });
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from date_file where idx in (?)`,
+            [total], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              rows.forEach((x) => {
+                if (!('file' in date_info[x.idx])) {
+                  date_info[x.idx].file = [];
+                }
+                date_info[x.idx].file.push([x.PathName, x.url]);
+              });
+              res();
+            });
+          });
+          console.log(date_info);
+          res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
+          data: data, info: date_info});
+        } catch (e) {
+          console.log(e);
+          res.status(504).json({message: e});
         }
-        res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',data: rows});
       });
     }
   }
@@ -153,36 +237,80 @@ app.get('/class', log_authorize, function(req, res) {
   }
 });
 
-/*app.get('/class/:classid', log_authorize, function(req, res) {
-  const id = req.params.classid;
-  console.log(id);
-  try {
-    db.serialize(function() {
-      db.all(`select * from class where class_id = ?`, [id], (e, rows) => {
-        if (e || rows.length !== 1) {
-          res.status(505).json({message: "Something went wrong"});
-        }
-      });
-      var student;
-      db.all(`select id, name, role, pos as position from information where id in (select id from learn where class_id = ?)`, [id], (e, rows) => {
-        if (e) {
-          res.status(505).json({message: "Something went wrong"});
-        }
-        student = rows;
-      });
-      db.all(`select id, name, role, pos as position from information where id in (select id from teach where class_id = ?)`, [id], (e, rows) => {
-        if (e) {
-          res.status(505).json({message: "Something went wrong"});
-        }
-        console.log(rows);
-        res.render(`${__dirname}/views/class-info.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: `Lớp học`, 
-        dataS: student, dataT: rows});
-      });
+app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),function(req, res) {
+  console.log(req.body);
+  console.log(req.files);
+  if (req.body.time && req.body.desc && req.body.target) {
+    for (let i = 0; i < req.body.time.length; i += 2) {
+      if (!(req.body.time[i] && req.body.time[i+1] && req.body.time[i] < req.body.time[i + 1])) {
+        req.body.time[i] = req.body.time[i+1] = '';
+      }
+    }
+    req.body.time = req.body.time.filter(x => x);
+    if (req.body.time.length === 0) {
+      deleteFile(req.files);
+      return res.status(508).json({message: "Không tồn tại thời gian hợp lệ"});
+    }
+    db.serialize(async function() {
+      try {
+        await new Promise((res, rej) => {
+          db.run(`insert into date_set (id_owner, note) values(?, ?)`, [req.session.key, req.body.desc], (e) => {
+            if (e) {
+              console.error("date_set", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        let id;
+        await new Promise((res, rej) => {
+          db.all(`select idx from date_set where idx = last_insert_rowid()`, (e, rows) => {
+            if (e || rows.length !== 1) {
+              rej("Lỗi database");
+            }
+            id = rows[0].idx;
+            res();
+          });
+        });
+        await new Promise((res, rej) => {
+          db.run(`insert into date_target(idx, id) values ${`(${id}, ?),`.repeat(req.body.target.length).slice(0, -1)}`, req.body.target, (e) => {
+            if (e) {
+              console.error("date_target", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        await new Promise((res, rej) => {
+          db.run(`insert into date_book values ${`(${id}, ?, ?),`.repeat(req.body.time.length/2).slice(0, -1)}`, req.body.time, (e) => {
+            if (e) {
+              console.error("date_book", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        await new Promise((res, rej) => {
+          db.run(`insert into date_file values ${`(${id}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+            if (e) {
+              console.error("date_file", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        res.json({message: "Success"});
+      }catch (e) {
+        deleteFile(req.files);
+        res.status(508).json({message: e});
+      }
     });
-  } catch (e) {
-    res.status(505).json({message: e.message});
   }
-});*/
+  else {
+    deleteFile(req.files);
+    res.status(508).json({message: "Thông tin thiếu hoặc không hợp lệ"});
+  }
+});
 
 app.post('/api/book', function(req, res) {
   const data = req.body;
@@ -212,7 +340,6 @@ app.get('/api/book/:idx', log_authorize, function(req, res) {
       await new Promise((res, rej) => {
         db.all(`select id from calendar where mid = ?`, [data], (e, rows) => {
           if (e || rows.length !== 1 || rows[0].id !== req.session.key) {
-            console.error(e.message);
             rej("Invalid");
           }
           res();

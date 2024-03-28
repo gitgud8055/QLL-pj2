@@ -782,14 +782,6 @@ video {
   width: 100%;
 }
 
-.w-5\/12 {
-  width: 41.666667%;
-}
-
-.w-auto {
-  width: auto;
-}
-
 .min-w-\[438px\] {
   min-width: 438px;
 }
@@ -808,14 +800,6 @@ video {
 
 .flex-1 {
   flex: 1 1 0%;
-}
-
-.flex-shrink {
-  flex-shrink: 1;
-}
-
-.flex-grow {
-  flex-grow: 1;
 }
 
 .table-fixed {

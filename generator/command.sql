@@ -49,4 +49,36 @@ create table fileData (
   url text
 );
 
-create index filedata_url on fileData(url)
+create index filedata_url on fileData(url);
+
+create table date_set (
+  idx integer primary key autoincrement,
+  id_owner text,
+  note text
+);
+
+create index date_set_id_owner on date_set(id_owner);
+
+create table date_book (
+  idx text,
+  start text,
+  end text
+);
+create index date_book_idx on date_book(idx);
+
+create table date_target (
+  idx text,
+  id text,
+  start text,
+  end text
+);
+create index date_target_idx on date_target(idx);
+create index date_target_id on date_target(id);
+
+create table date_file (
+  idx text,
+  PathName text,
+  url text
+);
+create index date_file_idx on date_file(idx);
+create index date_file_url on date_file(url);
