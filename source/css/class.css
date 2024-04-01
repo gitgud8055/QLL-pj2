@@ -4,7 +4,10 @@
 }
 
 #title-list ~ *,
-#addJaiuAjw ~ * {
+#addJaiuAjw ~ *,
+#date-list ~ *,
+#get-list ~ *,
+#set-list ~ * {
     display: none;
 }
 

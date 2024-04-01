@@ -164,26 +164,29 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
+          let user_pend;
           await new Promise((res, rej) => {
-            db.all(`select idx from date_target where id = ?`, [req.session.key], (e, rows) => {
+            db.all(`select * from date_target where id = ?`, [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
                 rej("Lỗi database");
               }
+              user_pend = rows;
               pending = Array.from(rows, (x) => x.idx);
               res();
             });
           });
-          let total = waiting.concat(pending).toString();
+          let total = waiting.concat(pending);
           let date_info = {};
           await new Promise((res, rej) => {
-            db.all(`select * from (select * from date_set where idx in (?)) ds 
+            db.all(`select * from (select * from date_set where idx in (${total.map(() => '?').join(', ')})) ds 
             join (select id, name from information) i on ds.id_owner = i.id`, 
-            [total], (e, rows) => {
+            total, (e, rows) => {
               if (e) {
                 console.log(e.message);
                 rej("Lỗi database");
               }
+              console.log(rows);
               rows.forEach((x) => {
                 date_info[x.idx] = x;
               });
@@ -191,8 +194,8 @@ app.get('/class', log_authorize, function(req, res) {
             });
           });
           await new Promise((res, rej) => {
-            db.all(`select * from date_book where idx in (?)`,
-            [total], (e, rows) => {
+            db.all(`select * from date_book where idx in (${total.map(() => '?').join(', ')})`,
+            total, (e, rows) => {
               if (e) {
                 console.error(e.message);
                 rej("Lỗi database");
@@ -200,6 +203,7 @@ app.get('/class', log_authorize, function(req, res) {
               rows.forEach((x) => {
                 if (!('date' in date_info[x.idx])) {
                   date_info[x.idx].date = [];
+                  date_info[x.idx].file = [];
                 }
                 date_info[x.idx].date.push([x.start, x.end]);
               });
@@ -207,8 +211,8 @@ app.get('/class', log_authorize, function(req, res) {
             });
           });
           await new Promise((res, rej) => {
-            db.all(`select * from date_file where idx in (?)`,
-            [total], (e, rows) => {
+            db.all(`select * from date_file where idx in (${total.map(() => '?').join(', ')})`,
+            total, (e, rows) => {
               if (e) {
                 console.error(e.message);
                 rej("Lỗi database");
@@ -222,9 +226,21 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
+
+          let user_wait;
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_target where idx in (${waiting.map(() => '?').join(', ')})) dt join (select id, name from information) i on dt.id = i.id`, waiting, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              user_wait = rows;
+              res();
+            });
+          });
           console.log(date_info);
           res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
-          data: data, info: date_info});
+          data: data, info: date_info, wait: user_wait, pend: user_pend});
         } catch (e) {
           console.log(e);
           res.status(504).json({message: e});
@@ -242,7 +258,7 @@ app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),functi
   console.log(req.files);
   if (req.body.time && req.body.desc && req.body.target) {
     for (let i = 0; i < req.body.time.length; i += 2) {
-      if (!(req.body.time[i] && req.body.time[i+1] && req.body.time[i] < req.body.time[i + 1])) {
+      if (!(req.body.time[i] && req.body.time[i+1] && req.body.time[i] <= req.body.time[i + 1])) {
         req.body.time[i] = req.body.time[i+1] = '';
       }
     }
@@ -253,6 +269,15 @@ app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),functi
     }
     db.serialize(async function() {
       try {
+        await new Promise((res, rej) => {
+          db.run("begin transaction", (e) => {
+            if (e) {
+              console.error("begin transaction", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
         await new Promise((res, rej) => {
           db.run(`insert into date_set (id_owner, note) values(?, ?)`, [req.session.key, req.body.desc], (e) => {
             if (e) {
@@ -290,10 +315,21 @@ app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),functi
             res();
           });
         });
+        if (req.files.length > 0) {
+          await new Promise((res, rej) => {
+            db.run(`insert into date_file values ${`(${id}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+              if (e) {
+                console.error("date_file", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+        }
         await new Promise((res, rej) => {
-          db.run(`insert into date_file values ${`(${id}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+          db.run("commit", (e) => {
             if (e) {
-              console.error("date_file", e.message);
+              console.error("commit", e.message);
               rej("Lỗi database");
             }
             res();
@@ -302,6 +338,15 @@ app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),functi
         res.json({message: "Success"});
       }catch (e) {
         deleteFile(req.files);
+        await new Promise((res, rej) => {
+          db.run("rollback", (e) => {
+            if (e) {
+              console.error("rollback", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
         res.status(508).json({message: e});
       }
     });
@@ -476,6 +521,15 @@ app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),functi
       db.serialize(async function() {
         try {
           await new Promise((res, rej) => {
+            db.run("begin transaction", (e) => {
+              if (e) {
+                console.error("begin transaction", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
             db.run(`update calendar set date = ?, start = ?, end = ?, note = ? where mid = ?`, [data.cdate, data.stime, data.etime, data.desc, data.mid], (e) => {
               if (e) {
                 rej("Lỗi database");
@@ -504,9 +558,27 @@ app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),functi
               });
             });
           }
+          await new Promise((res, rej) => {
+            db.run("commit", (e) => {
+              if (e) {
+                console.error("commit", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
           res.json({message: "Success"});
         } catch (e) {
           deleteFile(req.files);
+          await new Promise((res, rej) => {
+            db.run("rollback", (e) => {
+              if (e) {
+                console.error("rollback", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
           res.status(506).json({message: e});
         }
 
@@ -514,6 +586,15 @@ app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),functi
     } else {
       db.serialize(async function() {
         try {
+          await new Promise((res, rej) => {
+            db.run("begin transaction", (e) => {
+              if (e) {
+                console.error("begin transaction", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
           await new Promise((res, rej) => {
             db.run(`insert into calendar(id, date, start, end, note) values (?, ?, ?, ?, ?)`, [req.session.key, data.cdate, data.stime, data.etime, data.desc], (err) => {
               if (err) {
@@ -546,9 +627,27 @@ app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),functi
               });
             });
           }
+          await new Promise((res, rej) => {
+            db.run("commit", (e) => {
+              if (e) {
+                console.error("commit", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
           res.json({message: "Success"});
         } catch (e) {
           deleteFile(req.files);
+          await new Promise((res, rej) => {
+            db.run("rollback", (e) => {
+              if (e) {
+                console.error("rollback", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
           res.status(506).json({message: e});
         }
       });

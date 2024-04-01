@@ -37,7 +37,7 @@ function malding(i) {
         cur.html("");
         console.log(data);
         data.data.forEach((item) => {
-          cur.append(`<div class="m-1 px-1 rounded flex flex-row" style="border: 1px solid black;" data-id="${item.path}"><div class="CjQWonTasj">${item.name}</div><button type="button" ><ion-icon name="close-outline"></ion-icon></button></div>`)
+          cur.append(`<div class="m-1 px-1 rounded flex flex-row cursor-pointer" style="border: 1px solid black;" data-id="${item.path}"><div class="CjQWonTasj">${item.name}</div><button type="button" ><ion-icon name="close-outline"></ion-icon></button></div>`)
         });
         $("#old .CjQWonTasj").click(function() {
           window.location.href = (`/api/download?l=${$(this).parent().attr("data-id")}&n=${$(this).text()}`);
