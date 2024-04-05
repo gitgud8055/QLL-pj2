@@ -31,12 +31,13 @@
             <tbody id="date-table">
               <% for (const [key, value] of Object.entries(info)) { %>
                 <tr>
-                  <td><%- key %> </td>
+                  <td><%- key %></td>
                   <td><%- value.name %></td>
-                  <td><%- value.id_owner %> </td>
-                  <td><%- value.note %> </td>
+                  <td><%- value.id_owner %></td>
+                  <td class="nbAMtUm1un"><%- value.note %></td>
                   <td style="color: blue; text-decoration: underline; " class="date-detail cursor-pointer">Detail
                     <div class="hidden"> 
+                      <% value.date.sort((x, y) => {return x < y ? -1 : 1}) %>
                       <% for (let i = 0; i < value.date.length; i++) { %>
                         <div><%- value.date[i][0] %> </div>
                         <div><%- value.date[i][1] %> </div>
@@ -77,11 +78,11 @@
             <tbody id="get-table">
               <% for (let v of wait) { %>
                 <tr>
-                  <td><%- v.idx %> </td>
+                  <td><%- v.idx %></td>
                   <td><%- v.id %></td>
                   <td><%- v.name %></td>
-                  <td><%- v.start %> </td>
-                  <td><%- v.end %> </td>
+                  <td><%- v.start %></td>
+                  <td><%- v.end %></td>
                 </tr>
               <% } %>
             </tbody>
@@ -108,7 +109,7 @@
             <tbody id="set-table">
               <% for (let v of pend) { %>
                 <tr>
-                  <td><%- v.idx %> </td>
+                  <td><%- v.idx %></td>
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
                   <td><button class="btn btn-primary">Chọn</button></td>
@@ -146,10 +147,14 @@
                 <div>Nội dung</div>
                 <textarea name="desc" id="OixHatQr" cols="" rows="6" class="w-full rounded py-1 px-2 form-control" value=""></textarea>
                 <div id="BxhYtlPa" class=" flex flex-wrap flex-row"></div>
+                <input type="file" class=" hidden" id="file-input1" name="file-document" multiple>
+                <button type="button" class="mt-2" onclick="document.getElementById('file-input1').click()"><ion-icon name="document-outline" style="font-size: 1.5rem;"></ion-icon></button>
+                <div id="KjYhjHat" class=" flex flex-wrap flex-row"></div>
+                <div id="fdWjfkwiA"></div>
               </div>
             </form>
             <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
-              <button class="btn btn-primary" id="">Done</button>
+              <button class="btn btn-primary" id="submit">Done</button>
             </div>
           </div>
         </div>
@@ -215,6 +220,26 @@
   <script>
     $("#set-table button").click(function() {
       let par = $(this).closest("tr").find("td");
+      if ($(this).hasClass("btn-success")) {
+        let idx = par.eq(0).html();
+        let st = par.eq(1).find("input");
+        let ed = par.eq(2).find("input");
+        if (st.attr('data-set') !== st.val() || ed.attr('data-set') !== ed.val()) {
+          fetch('/api/set-user-date', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({id: idx, start: st.val(), end: ed.val()})
+          }).then(async function(response) {
+            if (!response.ok) {
+              let x = await response.json();
+              throw new Error(`Error: ${x.message}`);
+            }
+            return response.json();
+          }).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});
+        }
+      }
       $(this).toggleClass("btn-success");
       $(this).text($(this).text() === "OK" ? "Chọn" : "OK");
       for (let i of [1, 2]) {
@@ -226,6 +251,42 @@
           cur.html(`<input type="datetime-local" value='${cur.html()}' data-set='${cur.html()}'>`);
         }
       }
+    });
+  </script>
+  <script>
+    const dtI = new DataTransfer();
+    $("#file-input1").change(function(event) {
+      const file = event.target.files;
+      const cur = $("#KjYhjHat");
+      for (let i = 0; i < file.length; i++) {
+        dtI.items.add(file[i]);
+        cur.append(`<div class="m-1 px-1 rounded" style="border: 1px solid black;">${file[i].name}<button type="button" data-id="${file[i].name}"><ion-icon name="close-outline"></ion-icon></button></div>`);
+      }
+      this.files = dtI.files;
+      cur.find("button").off('click');
+      cur.find("button").click(function() {
+        const target_name = $(this).attr('data-id');
+				//$(this).parent().remove();
+				for (let n = 0; n < dtI.items.length; n++) {
+					if (target_name === dtI.items[n].getAsFile().name) {
+						$(`#KjYhjHat div`).eq(n).remove();
+						dtI.items.remove(n);
+						break;
+					}
+				}
+				document.getElementById("file-input1").files = dtI.files;
+      });
+    });
+    $("#submit").click(function() {
+      const data = new FormData(document.getElementById("form-r"));
+      fetch('/api/change-date', {method: "POST", body: data})
+      .then(async function(response) {
+				if (!response.ok) {
+					let x = await response.json();
+					throw new Error(`Error: ${x.message}`);
+				}
+				return response.json();
+			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});
     });
   </script>
   <script>
@@ -271,7 +332,7 @@
 					throw new Error(`Error: ${x.message}`);
 				}
 				return response.json();
-			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});;
+			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});
 		}
 		$("#submit-cc").click(bratuSLegs);
   </script>
@@ -308,7 +369,7 @@
       $("#cc").hide();
     });
     $(".date-detail").click(function() {
-      const cur = $(this).find(" > div");
+      let cur = $(this).find(" > div");
       const list_time = [];
       const list_file = [];
       cur.eq(0).find("div").each(function() {
@@ -317,24 +378,34 @@
       cur.eq(1).find("div").each(function() {
         list_file.push($(this).html());
       });
-      $("#AkUkxmM, #BxhYtlPa").html("");
+      $("#AkUkxmM, #BxhYtlPa, #KjYhjHat, #fdWjfkwiA").html("");
       for (let i = 0; i < list_time.length; i += 2) {
         $("#AkUkxmM").append(`<div> ${list_time[i]} - ${list_time[i + 1]} </div>`);
       }
       for (let i = 0; i < list_file.length; i += 2) {
-        $("#BxhYtlPa").append(`<div class="m-1 px-1 rounded flex flex-row cursor-pointer" style="border: 1px solid black;" data-id="${list_file[i + 1]}">${list_file[i]}</div>`);
+        $("#BxhYtlPa").append(`<div class="m-1 px-1 rounded flex flex-row cursor-pointer" style="border: 1px solid black;" data-id="${list_file[i + 1]}">${list_file[i]}<button type="button" ><ion-icon name="close-outline"></ion-icon></button></div>`);
       }
       $("#BxhYtlPa div").click(function() {
         window.location.href = (`/api/download?l=${$(this).attr("data-id")}&n=${$(this).text()}`);
       });
-      $("#OixHatQr").val($(this).parent().find("td").eq(3).text());
+      function add(x) {
+        $("#fdWjfkwiA").append(`<input type="hidden" name="pl[]">`);
+        $("#fdWjfkwiA input").last().val(x);
+      }
+      $("#BxhYtlPa button").click(function() {
+        add($(this).parent().attr('data-id'));
+        $(this).parent().remove();
+      });
+      cur = $(this).parent().find("td");
+      $("#OixHatQr").val(cur.eq(3).text());
+      add(cur.eq(0).text());
       $("#cc").show();
     });
   </script>
   <script>
-    function add_class(mssv, name, cid, cn, course, role, position, id) {
+    function add_class(name, cid, cn, course, role, position, id) {
       $("#data-table").append(`<tr >
-        <td>${mssv} </td>
+        <td>${id}</td>
         <td id="${id}">${name}</td>
         <td>${cid}</td>
         <td>${cn}</td>
@@ -348,7 +419,7 @@
       });
     }
     <% for (let i = 0; i < data.length; i++) { %>
-      add_class('<%- data[i].id %>', '<%- data[i].name %>', '<%- data[i].cid %>', '<%- data[i].cn %>', '<%- data[i].course %>', '<%- data[i].role %>', '<%- data[i].position %>','<%- data[i].id %>');
+      add_class('<%- data[i].name %>', '<%- data[i].cid %>', '<%- data[i].cn %>', '<%- data[i].course %>', '<%- data[i].role %>', '<%- data[i].position %>','<%- data[i].id %>');
       <% } %>
     $("#data-table tr").click(function() {
       $(this).toggleClass("table-primary");

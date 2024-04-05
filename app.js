@@ -128,22 +128,12 @@ app.get('/api/account', log_authorize, function(req, res) {
 app.get('/class', log_authorize, function(req, res) {
   try {
     if (req.session.authority === "student") {
-      db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id from learn where id = ?) l 
-      join class c on l.class_id = c.class_id join teach t on c.class_id = t.class_id join information i where i.id = t.id`, 
-      [req.session.key], (e, rows) => {
-        if (e) {
-          res.status(504).json({message: e.message});
-        }
-        res.render(`${__dirname}/views/class-student.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',data: rows});
-      });
-    }
-    else if (req.session.authority === "teacher") {
       db.serialize(async function() {
         try {
           let data;
           await new Promise((res, rej) => {
-            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
-            from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
+            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id from learn where id = ?) l 
+            join class c on l.class_id = c.class_id join teach t on c.class_id = t.class_id join information i where i.id = t.id`, 
             [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
@@ -153,6 +143,7 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
+          
           let waiting, pending;
           await new Promise((res, rej) => {
             db.all(`select idx from date_set where id_owner = ?`, [req.session.key], (e, rows) => {
@@ -238,7 +229,116 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
-          console.log(date_info);
+          res.render(`${__dirname}/views/class-student.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
+          data: data, info: date_info, wait: user_wait, pend: user_pend});
+        } catch (e) {
+          console.log(e);
+          res.status(504).json({message: e});
+        }
+      });
+    }
+    else if (req.session.authority === "teacher") {
+      db.serialize(async function() {
+        try {
+          let data;
+          await new Promise((res, rej) => {
+            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
+            from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
+            [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              data = rows;
+              res();
+            });
+          });
+
+          let waiting, pending;
+          await new Promise((res, rej) => {
+            db.all(`select idx from date_set where id_owner = ?`, [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              waiting = Array.from(rows, (x) => x.idx);
+              res();
+            });
+          });
+          let user_pend;
+          await new Promise((res, rej) => {
+            db.all(`select * from date_target where id = ?`, [req.session.key], (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              user_pend = rows;
+              pending = Array.from(rows, (x) => x.idx);
+              res();
+            });
+          });
+          let total = waiting.concat(pending);
+          let date_info = {};
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_set where idx in (${total.map(() => '?').join(', ')})) ds 
+            join (select id, name from information) i on ds.id_owner = i.id`, 
+            total, (e, rows) => {
+              if (e) {
+                console.log(e.message);
+                rej("Lỗi database");
+              }
+              console.log(rows);
+              rows.forEach((x) => {
+                date_info[x.idx] = x;
+              });
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from date_book where idx in (${total.map(() => '?').join(', ')})`,
+            total, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              rows.forEach((x) => {
+                if (!('date' in date_info[x.idx])) {
+                  date_info[x.idx].date = [];
+                  date_info[x.idx].file = [];
+                }
+                date_info[x.idx].date.push([x.start, x.end]);
+              });
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from date_file where idx in (${total.map(() => '?').join(', ')})`,
+            total, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              rows.forEach((x) => {
+                if (!('file' in date_info[x.idx])) {
+                  date_info[x.idx].file = [];
+                }
+                date_info[x.idx].file.push([x.PathName, x.url]);
+              });
+              res();
+            });
+          });
+
+          let user_wait;
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_target where idx in (${waiting.map(() => '?').join(', ')})) dt join (select id, name from information) i on dt.id = i.id`, waiting, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              user_wait = rows;
+              res();
+            });
+          });
           res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
           data: data, info: date_info, wait: user_wait, pend: user_pend});
         } catch (e) {
@@ -253,9 +353,161 @@ app.get('/class', log_authorize, function(req, res) {
   }
 });
 
+function verify_date(s) {
+  return !isNaN(Date.parse(s));
+}
+
+app.post('/api/set-user-date', log_authorize, function(req, res) {
+  const data = req.body;
+  console.log(data);
+  if (!(data.id && data.start && data.end)) {
+    return res.status(509).json({message: "Dữ liệu đầu vào bị thiếu"});
+  }
+  if (!verify_date(data.start) || !verify_date(data.end)) {
+    return res.status(509).json({message: "Thời gian không hợp lệ"});
+  }
+  if (data.start > data.end) {
+    return res.status(509).json({message: "Thời điểm bắt đầu phải trước thời điểm kết thúc"});
+  }
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.all(`select * from date_target where idx = ? and id = ?`, [data.id, req.session.key], (e, rows) => {
+          if (e) {
+            console.error("add ", e);
+            rej("Không có quyền sửa đổi");
+          }
+          res();
+        });
+      });
+      await new Promise((res, rej) => {
+        db.all(`select * from date_book where idx = ?`, [data.id], (e, rows) => {
+          if (e) {
+            console.error("check ", e) ;
+            rej("Lỗi database");
+          }
+          rows.forEach((x) => {
+            if (x.start <= data.start && data.end <= x.end) {
+              res();
+            }
+          });
+          rej("Thời gian chọn không nằm trong lịch rảnh");
+        });
+      });
+      await new Promise((res, rej) => {
+        db.run(`update date_target set start = ?, end = ? where idx = ? and id = ?`, [data.start, data.end, data.id, req.session.key], (e) => {
+          if (e) {
+            console.error("update ", e);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+      res.json({message: "success"});
+    }
+    catch (e) {
+      console.log(e);
+      res.status(509).json({message: e});
+    }
+  });
+});
+
+app.post('/api/change-date', log_authorize, uf.upload.array('file-document'), function(req, res) {
+  const data = req.body;
+  // console.log(data);
+  // console.log(req.files);
+  if (data.desc && data.pl && data.pl.length > 0) {
+    let id = data.pl[0];
+    data.pl.shift();
+    db.serialize(async function() {
+      try {
+        await new Promise((sol, rej) => {
+          db.run("begin transaction", (e) => {
+            if (e) {
+              console.error("begin ", e.message);
+              rej("Lỗi database");
+            }
+            sol();
+          })
+        });
+        await new Promise((sol, rej) => {
+          db.all("select * from date_set where idx = ? and id_owner = ?", [id, req.session.key], (e, rows) => {
+            if (e) {
+              console.error("verify ", e.message);
+              rej("Lỗi database");
+            }
+            if (rows.length !== 1) {
+              rej("Không có quyền sửa đổi thông tin");
+            }
+            sol();
+          });
+        });
+        await new Promise((sol, rej) => {
+          db.run("update date_set set note = ? where idx = ?", [data.desc, id], (e) => {
+            if (e) {
+              console.error("desc ", e.message);
+              rej("Lỗi database");
+            }
+            sol();
+          });
+        });
+        if (data.pl.length > 0) {
+          await new Promise((res, rej) => {
+            db.run(`delete from date_file where idx = ? and url in (${`?,`.repeat(data.pl.length).slice(0, -1)})`, [id].concat(data.pl), (e) => {
+              if (e) {
+                console.error("delete ", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+        }
+        if (req.files.length > 0) {
+          await new Promise((res, rej) => {
+            db.run(`insert into date_file values ${`(${id}, ?, ?),`.repeat(req.files.length).slice(0, -1)}`, req.files.flatMap(x => [x.originalname, x.filename]), (e) => {
+              if (e) {
+                console.error("date_file", e.message);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+        }
+        await new Promise((sol, rej) => {
+          db.run("commit", (e) => {
+            if (e) {
+              console.error("commit ", e.message);
+              rej("Lỗi database");
+            }
+          });
+          sol();
+        });
+        res.json({message: "Success"});
+      }
+      catch (e) {
+        deleteFile(req.files);
+        await new Promise((res, rej) => {
+          db.run("rollback", (e) => {
+            if (e) {
+              console.error("rollback", e.message);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        res.status(510).json({message: e});
+      }
+    });
+  }
+  else {
+    deleteFile(req.files);
+    res.status(510).json({message: "Thông tin thiếu hoặc không hợp lệ"});
+  }
+});
+
 app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),function(req, res) {
-  console.log(req.body);
-  console.log(req.files);
+  // console.log(req.body);
+  // console.log(req.files);
   if (req.body.time && req.body.desc && req.body.target) {
     for (let i = 0; i < req.body.time.length; i += 2) {
       if (!(req.body.time[i] && req.body.time[i+1] && req.body.time[i] <= req.body.time[i + 1])) {
@@ -539,7 +791,7 @@ app.post('/api/change-c', log_authorize, uf.upload.array('file-document'),functi
           });
           if (data.pl && data.pl.length > 0) {
             await new Promise((res, rej) => {
-              db.run(`delete from filedata where id = ? and url in (?)`, [data.mid, data.pl.join(", ")], (e) => {
+              db.run(`delete from filedata where id = ? and url in (${`?,`.repeat(data.pl.length).slice(0, -1)})`, [data.mid].concat(data.pl), (e) => {
                 if (e) {
                   rej("Lỗi database");
                 }
