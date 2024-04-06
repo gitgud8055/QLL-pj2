@@ -245,7 +245,7 @@
       for (let i of [1, 2]) {
         let cur = par.eq(i);
         if (cur.find("input").length > 0) {
-          cur.html(cur.find("input").val());
+          cur.html(cur.find("input").attr('data-set'));
         }
         else {
           cur.html(`<input type="datetime-local" value='${cur.html()}' data-set='${cur.html()}'>`);

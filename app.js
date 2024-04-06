@@ -734,7 +734,7 @@ app.post('/api/change-pass', log_authorize, function(req, res) {
   db.serialize(async function() {
     try {
       await new Promise((res, rej) => {
-        db.all(`select password from account where id = ${req.session.key}`, (e, rows) => {
+        db.all(`select password from account where id = ?`, [req.session.key],(e, rows) => {
           if (e) {
             rej(e.message);
           }
@@ -745,7 +745,7 @@ app.post('/api/change-pass', log_authorize, function(req, res) {
         });
       });
       await new Promise((res, rej) => {
-        db.run(`update account set password = ? where id = ${req.session.key}`, [data['new']], (e) => {
+        db.run(`update account set password = ? where id = ?`, [data['new'], req.session.key], (e) => {
           if (e) {
             reject(e.message);
           }
