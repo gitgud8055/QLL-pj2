@@ -23,3 +23,7 @@
             line-clamp: 4;
     -webkit-box-orient: vertical;
 }
+
+.noted-v1:hover, .noted-v2:hover {
+    cursor: pointer;
+}

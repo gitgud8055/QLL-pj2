@@ -353,6 +353,58 @@ app.get('/class', log_authorize, function(req, res) {
   }
 });
 
+app.post('/api/change-note', log_authorize, uf.upload.none(), function(req, res) {
+  const data = req.body;
+  if (data.desc && data.id && data.user) {
+    db.serialize(async function() {
+      try {
+        await new Promise((res, rej) => {
+          db.all(`select * from date_set where idx = ? and id_owner = ?`, [data.id, req.session.key], (e, rows) => {
+            if (e) {
+              console.error("select ", e);
+              rej("Lỗi database");
+            }
+            if (rows.length !== 1) {
+              console.error("authority");
+              rej("Không có quyền sửa đổi");
+            }
+            res();
+          });
+        });
+        await new Promise((res, rej) => {
+          db.all(`select * from date_target where idx = ? and id = ?`, [data.id, data.user], (e, rows) => {
+            if (e) {
+              console.error("select2 ", e);
+              rej("Lỗi database");
+            }
+            if (rows.length !== 1) {
+              console.error("authority2");
+              rej("Không có quyền sửa đổi");
+            }
+            res();
+          });
+        });
+        await new Promise((res, rej) => {
+          db.run(`update date_target set note = ? where idx = ? and id = ?`, [data.desc, data.id, data.user], (e) => {
+            if (e) {
+              console.log("update", e);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+        res.json({message: "Success"});
+      }
+      catch (e) {
+        res.status(512).json({message: e});
+      }
+    });
+  }
+  else {
+    res.status(512).json({message: "Thông tin thiếu hoặc không hợp lệ"});
+  }
+});
+
 function verify_date(s) {
   return !isNaN(Date.parse(s));
 }
@@ -374,7 +426,11 @@ app.post('/api/set-user-date', log_authorize, function(req, res) {
       await new Promise((res, rej) => {
         db.all(`select * from date_target where idx = ? and id = ?`, [data.id, req.session.key], (e, rows) => {
           if (e) {
-            console.error("add ", e);
+            console.error("select ", e);
+            rej("Lỗi database");
+          }
+          if (rows.length !== 1) {
+            console.error("select");
             rej("Không có quyền sửa đổi");
           }
           res();

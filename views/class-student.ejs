@@ -73,6 +73,7 @@
                 <th>Người nhận</th>
                 <th>Thời điểm bắt đầu</th>
                 <th>Thời điểm kết thúc</th>
+                <th>Ghi chú</th>
               </tr>
             </thead>
             <tbody id="get-table">
@@ -83,6 +84,7 @@
                   <td><%- v.name %></td>
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
+                  <td class="noted-v1"><%- v.note %></td>
                 </tr>
               <% } %>
             </tbody>
@@ -104,6 +106,7 @@
                 <th>#</th>
                 <th>Thời điểm bắt đầu</th>
                 <th>Thời điểm kết thúc</th>
+                <th>Ghi chú</th>
               </tr>
             </thead>
             <tbody id="set-table">
@@ -112,6 +115,7 @@
                   <td><%- v.idx %></td>
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
+                  <td class="noted-v2"><%- v.note%></td>
                   <td><button class="btn btn-primary">Chọn</button></td>
                 </tr>
               <% } %>
@@ -121,10 +125,43 @@
       </div>
 
       <style>
-        #form-c > div, #form-r > div {
+        #form-c > div, #form-r > div, #form-i > div {
           margin-bottom: 0.5rem;
         }		
       </style>
+
+      <div class=" fixed top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="info">
+        <div class=" p-1 w-full" >
+          <div class=" px-2 py-2 fw-bold fs-5 text-primary flex justify-center">
+            <div class="">
+              Ghi chú cuộc hẹn
+            </div>
+          </div>
+          <div class="absolute top-0 right-0 off-i" style="z-index: 899;">
+            <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
+          </div>
+          <div>
+            <form class="w-full px-4 mt-3" id="form-i">
+              <div class="form-group">
+                <div>Mã cuộc hẹn: <span id="PlqUak"></span></div>
+              </div>
+              <div class="form-group">
+                <div>ID người nhận: <span id="MqaiUw"></span></div>
+              </div>
+              <div class="form-group">
+                <div>Tên người nhận: <span id="NajycTa"></span></div>
+              </div>
+              <div class="form-group">
+                <div>Nội dung</div>
+                <textarea name="desc" id="OiwJuma" cols="" rows="6" class="w-full rounded py-1 px-2 form-control" value=""></textarea>
+              </div>
+            </form>
+            <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+              <button class="btn btn-primary" id="sm">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class=" fixed top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="cc">
         <div class=" p-1 w-full" >
           <div class=" px-2 py-2 fw-bold fs-5 text-primary flex justify-center">
@@ -250,6 +287,42 @@
           cur.html(`<input type="datetime-local" value='${cur.html()}' data-set='${cur.html()}'>`);
         }
       }
+    });
+  </script>
+  <script>
+    $(".off-i").click(function() {$("#info").hide();});
+    $(".noted-v1").click(function() {
+      $("#OiwJuma").val($(this).text());
+      let cur = $(this).parent().find("td");
+      $("#PlqUak").text(cur.eq(0).text());
+      $("#MqaiUw").parent().show();
+      $("#NajycTa").parent().show();
+      $("#MqaiUw").text(cur.eq(1).text());
+      $("#NajycTa").text(cur.eq(2).text());
+      $("#info").show();
+    });
+    $(".noted-v2").click(function() {
+      $("#OiwJuma").val($(this).text());
+      $("#PlqUak").text($(this).parent().find("td").eq(0).text());
+      $("#MqaiUw").parent().hide();
+      $("#NajycTa").parent().hide();
+      $("#info").show();
+    });
+    $("#sm").click(function() {
+      const data = new FormData(document.getElementById("form-i"));
+      data.append('id', $("#PlqUak").text());
+      data.append('user', $("#MqaiUw").text());
+      for (const [n, v] of data.entries()) {
+        console.log(n, v);
+      }
+      fetch('/api/change-note', {method: "POST", body: data})
+      .then(async function(response) {
+				if (!response.ok) {
+					let x = await response.json();
+					throw new Error(`Error: ${x.message}`);
+				}
+				return response.json();
+			}).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});
     });
   </script>
   <script>
