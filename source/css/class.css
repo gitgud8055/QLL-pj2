@@ -7,7 +7,9 @@
 #addJaiuAjw ~ *,
 #date-list ~ *,
 #get-list ~ *,
-#set-list ~ * {
+#set-list ~ *,
+#class-list ~ *,
+#learn-list ~ * {
     display: none;
 }
 

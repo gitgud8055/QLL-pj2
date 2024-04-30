@@ -69,6 +69,7 @@ function trigger_multisearch(name) {
     var TextValue;
     for (let i = 0; i < tr.length; i++) {
       td = tr[i].getElementsByTagName('td');
+      if (tr[i].classList.contains("skip")) continue;
       var flag = true;
       for (let j = 0; j < number_column; j++) {
         if (td[j]) {

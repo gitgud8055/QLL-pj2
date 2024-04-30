@@ -5,6 +5,7 @@ const parser = require('body-parser');
 const ejs = require('ejs');
 const sqlite3 = require('sqlite3').verbose();
 const session = require('express-session');
+const fs = require('fs');
 
 const app = express();
 const db = new sqlite3.Database('data.db');
@@ -37,6 +38,10 @@ const log_authorize = (req, res, next) => {
   }
   //res.render(`${__dirname}/views/login.ejs`, {root: __dirname});
   res.redirect('/login');
+};
+
+const authorize = (req, res, pos) => {
+  return (pos.includes(req.session.authority));
 };
 
 app.get('/login', function(req, res) {
@@ -347,10 +352,310 @@ app.get('/class', log_authorize, function(req, res) {
         }
       });
     }
+    else if (req.session.authority === "admin") {
+      db.serialize(async function() {
+        try {
+          let account, teach, learn;
+          await new Promise((res, rej) => {
+            db.all(`select * from ((select id, username, password, authority from account) a join information i on i.id = a.id)`, (e, rows) => {
+              if (e) {
+                console.error("select account");
+                rej("Lỗi database");
+              }
+              account = rows;
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from class c join teach t on c.class_id = t.class_id`, (e, rows) => {
+              if (e) {
+                console.error("select teaching");
+                rej("Lỗi database");
+              }
+              teach = rows;
+              res();
+            });
+          });
+          await new Promise((res, rej) => {
+            db.all(`select * from class c join learn t on c.class_id = t.class_id join information i on i.id = t.id`, (e, rows) => {
+              if (e) {
+                console.error("select teaching");
+                rej("Lỗi database");
+              }
+              learn = rows;
+              res();
+            });
+          });
+          res.render(`${__dirname}/views/class-admin.ejs`, {root: __dirname, username: req.session.username, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
+          account: account, teach: teach, learn: learn});
+        }
+        catch (e) {
+          res.status(513).json({message: e});
+        }
+      });
+    }
   }
   catch(e) {
     res.status(504).json({message: e.message});
   }
+});
+
+app.post('/api/change-password', log_authorize, function(req, res, next) {
+  if (authorize(req, res, ["admin"])) {
+    return next();
+  }
+  return res.status(514).json({message: "Không có quyền"});
+}, function(req, res) {
+  const data = req.body;
+  console.log(data);
+  if (data.password && data.id) {
+    db.run('update account set password = ? where id = ?', [data.password, data.id], (e) => {
+      if (e) {
+        res.status(514).json({message: "Lỗi database"});
+      }
+      else {
+        res.json({message: "Success"});
+      }
+    });
+  }
+  else {
+    res.status(514).json({message: "Thông tin bị thiếu"});
+  }
+});
+
+app.post('/api/add-class', log_authorize, function(req, res, next) {
+  if (authorize(req, res, ["admin"])) {
+    return next();
+  }
+  return res.status(515).json({message: "Không có quyền"});
+}, function(req, res) {
+  if (!req.body || !req.body.data) {
+    return res.status(515).json({message: "Thông tin bị thiếu hoặc không hợp lệ"});
+  }
+  const data = req.body.data;
+  console.log(data);
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.run("begin transaction", (e) => {
+          if (e) {
+            console.error("begin ", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        })
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select * from class where class_id = ?`, [data[0]], (e, rows) => {
+          if (e) {
+            console.error("select class", e.message);
+            rej("Lỗi database");
+          }
+          if (rows.length > 0) {
+            rej("Lớp đã tồn tại");
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select authority from account where id = ?`, [data[3]], (e, rows) => {
+          if (e) {
+            console.error("select account", e.message);
+            return rej("Lỗi database");
+          }
+          if (rows.length !== 1) {
+            return rej("Không tồn tại giảng viên này");
+          }
+          if (rows[0].authority !== "teacher") {
+            return rej("ID này không thuộc về giảng viên");
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.run(`insert into class values (?, ?, ?)`, [data[0], data[1], data[2]], (e) => {
+          if (e) {
+            console.error("insert class", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.run(`insert into teach values (?, ?)`, [data[3], data[0]], (e) => {
+          if (e) {
+            console.error("insert class", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+
+      await new Promise((sol, rej) => {
+        db.run("commit", (e) => {
+          if (e) {
+            console.error("commit ", e.message);
+            rej("Lỗi database");
+          }
+        });
+        sol();
+      });
+      res.json({message: "Success"});
+    } 
+    catch (e) {
+      await new Promise((res, rej) => {
+        db.run("rollback", (e) => {
+          if (e) {
+            console.error("rollback", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+      res.status(515).json({message: e});
+    }
+  });
+});
+
+app.post('/api/add-student', log_authorize, function(req, res, next) {
+  if (authorize(req, res, ["admin"])) {
+    return next();
+  }
+  return res.status(516).json({message: "Không có quyền"});
+}, uf.upload.single('file'), function(req, res) {
+  const data = req.body;
+  console.log(data, req.file);
+
+  if (!data || !data.id_class || (!data.id && !req.file)) {
+    if (req.file) deleteFile([req.file]);
+    return res.status(516).json({message: "Thiếu thông tin"});
+  }
+
+  let list_name = [];
+  if (req.file) {
+    try {
+      if (!req.file.originalname.endsWith(".csv")) {
+        throw new Error("Chỉ chấp nhận file csv");
+      }
+
+      const infor = fs.readFileSync(req.file.path, 'utf8').split('\n').map((v) => v.split(','));
+      console.log(infor);
+      for (let i = 0; i < infor[0].length; i++) {
+        if (infor[0][i] === "MSSV") {
+          for (let j = 1; j < infor.length; j++) {
+            if (i < infor[j].length) {
+              list_name.push(infor[j][i]);
+            }
+          }
+          break;
+        }
+      }
+
+      if (list_name.length === 0) {
+        throw new Error("Không tồn tại MSSV hợp lệ");
+      }
+    } catch (e) {
+      return res.status(515).json({message: e.message});
+    } finally {
+      deleteFile([req.file]);
+    }
+  }
+  else {
+    list_name.push(data.id);
+  }
+
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.run("begin transaction", (e) => {
+          if (e) {
+            console.error("begin ", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        })
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select * from class where class_id = ?`, [data.id_class], (e, rows) => {
+          if (e) {
+            console.error("select class", e.message);
+            rej("Lỗi database");
+          }
+          if (rows.length !== 1) {
+            rej("Lớp không tồn tại");
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select id from account where id in (${list_name.map(v => '?').join(',')}) and authority = 'student'`, list_name, (e, rows) => {
+          if (e) {
+            console.error("select account ", e.message);
+            rej("Lỗi database");
+          }
+          if (rows.length === 0) {
+            rej("Không tồn tại MSSV hợp lệ")
+          }
+          list_name = rows.map(v => v.id);
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select id from learn where class_id = ? and id in (${list_name.map(v => '?').join(',')})`, [data.id_class , ...list_name], (e, rows) => {
+          if (e) {
+            console.error("select information2 ", e.message);
+            rej("Lỗi database");
+          }
+          let cur = new Set(rows.map(v => v.id));
+          list_name = list_name.filter(v => !cur.has(v));
+          if (list_name.length === 0) {
+            rej("Không tồn tại MSSV hợp lệ")
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.run(`insert into learn(class_id, id) values ${list_name.map(v => `(${data.id_class}, ?)`).join(',') }`, list_name, (e, rows) => {
+          if (e) {
+            console.error("insert ", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+
+      await new Promise((sol, rej) => {
+        db.run("commit", (e) => {
+          if (e) {
+            console.error("commit ", e.message);
+            rej("Lỗi database");
+          }
+        });
+        sol();
+      });
+
+      res.json({message: "Success"});
+    } catch (e) {
+      await new Promise((res, rej) => {
+        db.run("rollback", (e) => {
+          if (e) {
+            console.error("rollback", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
+      res.status(516).json({message: e});
+    }
+  });
 });
 
 app.post('/api/change-note', log_authorize, uf.upload.none(), function(req, res) {
