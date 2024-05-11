@@ -622,10 +622,6 @@ video {
   top: 50%;
 }
 
-.-top-1 {
-  top: -0.25rem;
-}
-
 .m-1 {
   margin: 0.25rem;
 }
@@ -786,6 +782,14 @@ video {
   width: 100%;
 }
 
+.w-28 {
+  width: 7rem;
+}
+
+.w-52 {
+  width: 13rem;
+}
+
 .min-w-\[438px\] {
   min-width: 438px;
 }
@@ -812,10 +816,6 @@ video {
 
 .transform {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
-}
-
-.animate-\[all_1s_ease\] {
-  animation: all 1s ease;
 }
 
 .cursor-pointer {
@@ -866,6 +866,10 @@ video {
   overflow-y: auto;
 }
 
+.text-wrap {
+  text-wrap: wrap;
+}
+
 .rounded {
   border-radius: 0.25rem;
 }
@@ -895,6 +899,11 @@ video {
   background-color: rgb(48 49 50 / var(--tw-bg-opacity));
 }
 
+.bg-\[\#616161\] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(97 97 97 / var(--tw-bg-opacity));
+}
+
 .bg-\[\#b8bed1\] {
   --tw-bg-opacity: 1;
   background-color: rgb(184 190 209 / var(--tw-bg-opacity));
@@ -913,26 +922,6 @@ video {
 .bg-slate-500 {
   --tw-bg-opacity: 1;
   background-color: rgb(100 116 139 / var(--tw-bg-opacity));
-}
-
-.bg-black {
-  --tw-bg-opacity: 1;
-  background-color: rgb(0 0 0 / var(--tw-bg-opacity));
-}
-
-.bg-slate-700 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(51 65 85 / var(--tw-bg-opacity));
-}
-
-.bg-\[\#555\] {
-  --tw-bg-opacity: 1;
-  background-color: rgb(85 85 85 / var(--tw-bg-opacity));
-}
-
-.bg-\[\#616161\] {
-  --tw-bg-opacity: 1;
-  background-color: rgb(97 97 97 / var(--tw-bg-opacity));
 }
 
 .p-1 {
@@ -1027,17 +1016,8 @@ video {
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
-.text-\[\#fff\] {
-  --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity));
-}
-
 .underline {
   text-decoration-line: underline;
-}
-
-.opacity-0 {
-  opacity: 0;
 }
 
 .transition {
@@ -1048,31 +1028,11 @@ video {
   transition-duration: 150ms;
 }
 
-.hover\:block:hover {
-  display: block;
-}
-
 .hover\:bg-slate-200:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(226 232 240 / var(--tw-bg-opacity));
 }
 
-.group:hover .group-hover\:visible {
-  visibility: visible;
-}
-
-.group:hover .group-hover\:block {
-  display: block;
-}
-
 .group\/guide:hover .group-hover\/guide\:block {
   display: block;
-}
-
-.group:hover .group-hover\:opacity-100 {
-  opacity: 1;
-}
-
-.group\/guide:hover .group-hover\/guide\:opacity-100 {
-  opacity: 1;
 }

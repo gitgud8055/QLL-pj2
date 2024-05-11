@@ -137,8 +137,8 @@ app.get('/class', log_authorize, function(req, res) {
         try {
           let data;
           await new Promise((res, rej) => {
-            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id from learn where id = ?) l 
-            join class c on l.class_id = c.class_id join teach t on c.class_id = t.class_id join information i where i.id = t.id`, 
+            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id, Tid from learn where id = ?) l 
+            join class c on l.class_id = c.class_id join information i where i.id = l.Tid`, 
             [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
@@ -248,7 +248,7 @@ app.get('/class', log_authorize, function(req, res) {
           let data;
           await new Promise((res, rej) => {
             db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
-            from (select class_id from teach where id = ?) t join class c on t.class_id = c.class_id join learn l on l.class_id = c.class_id join information i on i.id = l.id`, 
+            from (select class_id, id from learn where Tid = ?) t join class c on t.class_id = c.class_id join information i on i.id = t.id`, 
             [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
@@ -355,7 +355,7 @@ app.get('/class', log_authorize, function(req, res) {
     else if (req.session.authority === "admin") {
       db.serialize(async function() {
         try {
-          let account, teach, learn;
+          let account;
           await new Promise((res, rej) => {
             db.all(`select * from ((select id, username, password, authority from account) a join information i on i.id = a.id)`, (e, rows) => {
               if (e) {
@@ -366,28 +366,8 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
-          await new Promise((res, rej) => {
-            db.all(`select * from class c join teach t on c.class_id = t.class_id`, (e, rows) => {
-              if (e) {
-                console.error("select teaching");
-                rej("Lỗi database");
-              }
-              teach = rows;
-              res();
-            });
-          });
-          await new Promise((res, rej) => {
-            db.all(`select * from class c join learn t on c.class_id = t.class_id join information i on i.id = t.id`, (e, rows) => {
-              if (e) {
-                console.error("select teaching");
-                rej("Lỗi database");
-              }
-              learn = rows;
-              res();
-            });
-          });
           res.render(`${__dirname}/views/class-admin.ejs`, {root: __dirname, username: req.session.username, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
-          account: account, teach: teach, learn: learn});
+          account: account});
         }
         catch (e) {
           res.status(513).json({message: e});
@@ -522,7 +502,7 @@ app.post('/api/add-class', log_authorize, function(req, res, next) {
 });
 
 app.post('/api/add-student', log_authorize, function(req, res, next) {
-  if (authorize(req, res, ["admin"])) {
+  if (authorize(req, res, ["teacher"])) {
     return next();
   }
   return res.status(516).json({message: "Không có quyền"});
@@ -530,7 +510,7 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
   const data = req.body;
   console.log(data, req.file);
 
-  if (!data || !data.id_class || (!data.id && !req.file)) {
+  if (!data || (!req.file && (!data.id || !data.id_class))) {
     if (req.file) deleteFile([req.file]);
     return res.status(516).json({message: "Thiếu thông tin"});
   }
@@ -544,14 +524,26 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
 
       const infor = fs.readFileSync(req.file.path, 'utf8').split('\n').map((v) => v.split(','));
       console.log(infor);
-      for (let i = 0; i < infor[0].length; i++) {
-        if (infor[0][i] === "MSSV") {
-          for (let j = 1; j < infor.length; j++) {
-            if (i < infor[j].length) {
-              list_name.push(infor[j][i]);
-            }
+      const position = [];
+      for (let x of ["MSSV", "classID"]) {
+        let x = info[0].findIndex(x);
+        if (x !== -1) position.push(x);
+        else {
+          throw new Error("Thiếu thông tin cần thiết");
+        }
+      }
+
+      let cur;
+      for (let j = 1; j < infor.length; j++) {
+        cur = [];
+        for (let x of position) {
+          if (x < info[j].length) {
+            cur.push(info[j][x]);
           }
-          break;
+          else break;
+        }
+        if (cur.length === position.length) {
+          list_name.push(cur);
         }
       }
 
@@ -565,7 +557,7 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
     }
   }
   else {
-    list_name.push(data.id);
+    list_name.push([data.id, data.id_class]);
   }
 
   db.serialize(async function() {
@@ -581,49 +573,52 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
       });
 
       await new Promise((res, rej) => {
-        db.all(`select * from class where class_id = ?`, [data.id_class], (e, rows) => {
-          if (e) {
-            console.error("select class", e.message);
-            rej("Lỗi database");
-          }
-          if (rows.length !== 1) {
-            rej("Lớp không tồn tại");
-          }
-          res();
-        });
-      });
-
-      await new Promise((res, rej) => {
-        db.all(`select id from account where id in (${list_name.map(v => '?').join(',')}) and authority = 'student'`, list_name, (e, rows) => {
+        db.all(`select id from account where id in (${list_name.map(v => '?').join(',')}) and authority = 'student'`, list_name.map(v => v[0]), (e, rows) => {
           if (e) {
             console.error("select account ", e.message);
             rej("Lỗi database");
           }
+          let cur = new Set(rows.map(v => v.id));
+          list_name = list_name.filter(v => cur.has(v[0]));
           if (rows.length === 0) {
-            rej("Không tồn tại MSSV hợp lệ")
+            rej("Không tồn tại dữ liệu hợp lệ")
           }
-          list_name = rows.map(v => v.id);
           res();
         });
       });
 
       await new Promise((res, rej) => {
-        db.all(`select id from learn where class_id = ? and id in (${list_name.map(v => '?').join(',')})`, [data.id_class , ...list_name], (e, rows) => {
+        db.all(`select class_id from class where class_id in (${list_name.map(v => '?').join(',')})`, list_name.map(v => v[1]), (e, rows) => {
+          if (e) {
+            console.error("select class ", e.message);
+            rej("Lỗi database");
+          }
+          let cur = new Set(rows.map(v => v.class_id));
+          list_name = list_name.filter(v => cur.has(v[1]));
+          if (rows.length === 0) {
+            rej("Không tồn tại dữ liệu hợp lệ")
+          }
+          res();
+        });
+      });
+
+      await new Promise((res, rej) => {
+        db.all(`select id from learn where Tid = ? and id in (${list_name.map(v => '?').join(',')})`, [req.session.key , ...list_name.map(v => v[0])], (e, rows) => {
           if (e) {
             console.error("select information2 ", e.message);
             rej("Lỗi database");
           }
           let cur = new Set(rows.map(v => v.id));
-          list_name = list_name.filter(v => !cur.has(v));
+          list_name = list_name.filter(v => !cur.has(v[0]));
           if (list_name.length === 0) {
-            rej("Không tồn tại MSSV hợp lệ")
+            rej("Không tồn tại dữ liệu hợp lệ")
           }
           res();
         });
       });
 
       await new Promise((res, rej) => {
-        db.run(`insert into learn(class_id, id) values ${list_name.map(v => `(${data.id_class}, ?)`).join(',') }`, list_name, (e, rows) => {
+        db.run(`insert into learn(id, Tid, class_id) values ${list_name.map(v => `(?, '${req.session.key}', ?)`).join(',') }`, list_name.flat(3), (e, rows) => {
           if (e) {
             console.error("insert ", e.message);
             rej("Lỗi database");
@@ -660,37 +655,39 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
 
 app.post('/api/change-note', log_authorize, uf.upload.none(), function(req, res) {
   const data = req.body;
-  if (data.desc && data.id && data.user) {
+  if (data.desc && data.id) {
     db.serialize(async function() {
       try {
+        let owner;
         await new Promise((res, rej) => {
-          db.all(`select * from date_set where idx = ? and id_owner = ?`, [data.id, req.session.key], (e, rows) => {
+          db.all(`select * from date_set where idx = ?`, [data.id], (e, rows) => {
             if (e) {
               console.error("select ", e);
               rej("Lỗi database");
             }
             if (rows.length !== 1) {
               console.error("authority");
-              rej("Không có quyền sửa đổi");
+              rej("Không tồn tại lịch hẹn");
             }
+            owner = rows[0].id_owner;
             res();
           });
         });
         await new Promise((res, rej) => {
-          db.all(`select * from date_target where idx = ? and id = ?`, [data.id, data.user], (e, rows) => {
+          db.all(`select * from date_target where idx = ? and id = ?`, [data.id, data.user ? data.user : req.session.key], (e, rows) => {
             if (e) {
               console.error("select2 ", e);
               rej("Lỗi database");
             }
             if (rows.length !== 1) {
               console.error("authority2");
-              rej("Không có quyền sửa đổi");
+              rej("Không tồn tại lịch hẹn");
             }
             res();
           });
         });
         await new Promise((res, rej) => {
-          db.run(`update date_target set note = ? where idx = ? and id = ?`, [data.desc, data.id, data.user], (e) => {
+          db.run(`update date_target set ${data.user ? "note" : "noteTo"} = ? where idx = ? and id = ?`, [data.desc, data.id, data.user ? data.user : req.session.key], (e) => {
             if (e) {
               console.log("update", e);
               rej("Lỗi database");

@@ -115,7 +115,7 @@
                   <td><%- v.idx %></td>
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
-                  <td class="noted-v2"><%- v.note%></td>
+                  <td class="noted-v2"><%- v.noteTo %></td>
                   <td><button class="btn btn-primary">Chọn</button></td>
                 </tr>
               <% } %>
@@ -233,6 +233,9 @@
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
+        <div class="py-2">
+          <button class="btn btn-primary items-center flex flex-row" id="button-add-student"><ion-icon name="add-outline"></ion-icon> <span class=" pl-1">Add</span></button>
+        </div>
         <div class="table-responsive ">
           <table class="table table-bordered" id="dataTable">
             <thead>
@@ -247,6 +250,25 @@
               </tr>
             </thead>
             <tbody id="data-table">
+              <tr class="skip" style="display: none;" id="add-student">
+                <td><input type="text" class="w-full" id="input-class" placeholder="Mã lớp"></td>
+                <td>
+                  <form id="student-list" enctype="multipart/form-data" class="flex flex-row gap-1">
+                    <input type="text" class="w-full" id="input-student" name="id" placeholder="MSSV">
+                    <input type="file" name="file" id="add-student-file" class="hidden">
+                    <div class=" group/guide">
+                      <button id="pick-file"><ion-icon name="document-outline" class=" text-2xl"></ion-icon></button>
+                      <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/guide:block text-wrap w-52" style="transform: translate(-50%, -130%);">Chỉ chấp nhận file csv và những thông tin ở cột "MSSV" và "classID" sẽ được thêm vào tương ứng với MSSV và Mã lớp</span>
+                    </div>
+                  </form>
+                </td>
+                <td colspan="5">
+                  <div class="flex flex-row gap-1" >
+                    <button class="btn btn-success" id="submit-add-student">Done</button>
+                    <button class="btn btn-danger" id="del-add-student"><ion-icon name="trash-outline"></ion-icon></button>
+                  </div>
+                </td>
+              </tr>
               
             </tbody>
           </table>
@@ -389,7 +411,7 @@
 		});
 		function bratuSLegs() {
 			const formData = new FormData(document.getElementById("form-c"));
-      $("#data-table tr").each(function(i, item) {
+      $("#data-table tr:not([class='skip'])").each(function(i, item) {
         if ($(item).hasClass("table-primary")) {
           formData.append('target[]', $(item).find("td").eq(1).attr('id'));
         }
@@ -494,11 +516,11 @@
     <% for (let i = 0; i < data.length; i++) { %>
       add_class('<%- data[i].name %>', '<%- data[i].cid %>', '<%- data[i].cn %>', '<%- data[i].course %>', '<%- data[i].role %>', '<%- data[i].position %>','<%- data[i].id %>');
       <% } %>
-    $("#data-table tr").click(function() {
+    $("#data-table tr:not([class='skip'])").click(function() {
       $(this).toggleClass("table-primary");
     });
     let SelectorAllElement = false;
-    $("#data-table tr").mouseover(function(event) {
+    $("#data-table tr:not([class='skip'])").mouseover(function(event) {
       if (SelectorAllElement) {
         $(this).click();
       }
@@ -507,6 +529,51 @@
       if (event.key === "Shift") {
         SelectorAllElement = !SelectorAllElement;
       }
+    });
+  </script>
+  <script>
+    $("#button-add-student").click(function() {
+      $("#add-student").show();
+    }); 
+    $("#del-add-student").click(function() {
+      $("#add-student input").val("");
+      $("#add-student input[type!='file']").prop('disabled', false);
+      $("#add-student").hide();
+    });
+    $("#pick-file").click(function() {
+      $("#add-student-file").click();
+    });
+    $("#add-student-file").change(function(event) {
+      const file = event.target.files[0];
+      console.log(file);
+      if (file) {
+        $("#add-student input[type!='file']").val("");
+        $("#add-student input[type!='file']").prop('disabled', true);
+        $("#input-student").val(file.name);
+      }
+      else {
+        $("#add-student input[type!='file']").val("");
+        $("#add-student input[type!='file']").prop('disabled', false);
+      }
+    }); 
+    $("#student-list").submit(function(event) {event.preventDefault();});
+    $("#submit-add-student").click(function() {
+      const data = new FormData(document.getElementById("student-list"));
+      data.append('id_class', $("#input-class").val());
+      for (const [n, v] of data.entries()) {
+        console.log(n, v);
+      }
+      fetch('/api/add-student', {
+        method: "POST",
+        body: data
+      })
+      .then(async function(response) {
+        if (!response.ok) {
+          let x = await response.json();
+          throw new Error(`Error: ${x.message}`);
+        }
+        return response.json();
+      }).then(data => {alert(data.message); }).catch(err => {alert(err.message);});
     });
   </script>
   <script src="/source/js/multisearch.js"></script>
