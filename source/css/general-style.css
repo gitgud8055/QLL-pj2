@@ -650,6 +650,10 @@ video {
   margin-bottom: 0.5rem;
 }
 
+.mb-1 {
+  margin-bottom: 0.25rem;
+}
+
 .ml-auto {
   margin-left: auto;
 }
@@ -774,20 +778,16 @@ video {
   width: 10rem;
 }
 
+.w-52 {
+  width: 13rem;
+}
+
 .w-\[384px\] {
   width: 384px;
 }
 
 .w-full {
   width: 100%;
-}
-
-.w-28 {
-  width: 7rem;
-}
-
-.w-52 {
-  width: 13rem;
 }
 
 .min-w-\[438px\] {
@@ -844,10 +844,6 @@ video {
 
 .justify-center {
   justify-content: center;
-}
-
-.justify-between {
-  justify-content: space-between;
 }
 
 .gap-1 {

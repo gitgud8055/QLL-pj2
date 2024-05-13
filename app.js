@@ -182,7 +182,6 @@ app.get('/class', log_authorize, function(req, res) {
                 console.log(e.message);
                 rej("Lỗi database");
               }
-              console.log(rows);
               rows.forEach((x) => {
                 date_info[x.idx] = x;
               });
@@ -201,7 +200,7 @@ app.get('/class', log_authorize, function(req, res) {
                   date_info[x.idx].date = [];
                   date_info[x.idx].file = [];
                 }
-                date_info[x.idx].date.push([x.start, x.end]);
+                date_info[x.idx].date.push([x.start, x.end, x.duration]);
               });
               res();
             });
@@ -292,7 +291,6 @@ app.get('/class', log_authorize, function(req, res) {
                 console.log(e.message);
                 rej("Lỗi database");
               }
-              console.log(rows);
               rows.forEach((x) => {
                 date_info[x.idx] = x;
               });
@@ -311,7 +309,7 @@ app.get('/class', log_authorize, function(req, res) {
                   date_info[x.idx].date = [];
                   date_info[x.idx].file = [];
                 }
-                date_info[x.idx].date.push([x.start, x.end]);
+                date_info[x.idx].date.push([x.start, x.end, x.duration]);
               });
               res();
             });
@@ -526,8 +524,8 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
       console.log(infor);
       const position = [];
       for (let x of ["MSSV", "classID"]) {
-        let x = info[0].findIndex(x);
-        if (x !== -1) position.push(x);
+        let id = infor[0].findIndex(v => v === x);
+        if (id !== -1) position.push(id);
         else {
           throw new Error("Thiếu thông tin cần thiết");
         }
@@ -537,8 +535,8 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
       for (let j = 1; j < infor.length; j++) {
         cur = [];
         for (let x of position) {
-          if (x < info[j].length) {
-            cur.push(info[j][x]);
+          if (x < infor[j].length) {
+            cur.push(infor[j][x]);
           }
           else break;
         }
@@ -707,21 +705,62 @@ app.post('/api/change-note', log_authorize, uf.upload.none(), function(req, res)
   }
 });
 
+app.get('/api/get-date', log_authorize, function(req, res){
+  const data = req.query.id;
+  db.serialize(async function() {
+    try {
+      await new Promise((res, rej) => {
+        db.all(`select * from date_target where idx = ? and id = ?`, [data, req.session.key], (e, rows) => {
+          if (e) {
+            console.error("select ", e);
+            rej("Lỗi database");
+          }
+          if (rows.length !== 1) {
+            console.error("select ");
+            rej("Không có quyền")
+          }
+          res();
+        });
+      });
+      await new Promise((res, rej) => {
+        db.all(`select start as st, end as ed, duration as dur from date_book where idx = ?`, [data], (e, rows) => {
+          if (e) {
+            console.error("select ", e);
+            rej("Lỗi database");
+          }
+          res(rows);
+        });
+      })
+      .then(data => {
+        res.json(data);
+      });
+    }
+    catch (e) {
+      res.status(504).json({message: e});
+    }
+  });
+});
+
 function verify_date(s) {
   return !isNaN(Date.parse(s));
 }
 
-app.post('/api/set-user-date', log_authorize, function(req, res) {
+function diff(s, t) {
+  return Date.parse(t) - Date.parse(s);
+}
+
+function shift(s, diff) {
+  return (new Date(Date.parse(s) + diff * 60000 + 7 * 3600000)).toISOString().slice(0, 16);
+}
+
+app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, res) {
   const data = req.body;
   console.log(data);
-  if (!(data.id && data.start && data.end)) {
+  if (!(data.id && data.date)) {
     return res.status(509).json({message: "Dữ liệu đầu vào bị thiếu"});
   }
-  if (!verify_date(data.start) || !verify_date(data.end)) {
+  if (!verify_date(data.date)) {
     return res.status(509).json({message: "Thời gian không hợp lệ"});
-  }
-  if (data.start > data.end) {
-    return res.status(509).json({message: "Thời điểm bắt đầu phải trước thời điểm kết thúc"});
   }
   db.serialize(async function() {
     try {
@@ -738,6 +777,7 @@ app.post('/api/set-user-date', log_authorize, function(req, res) {
           res();
         });
       });
+      let dur;
       await new Promise((res, rej) => {
         db.all(`select * from date_book where idx = ?`, [data.id], (e, rows) => {
           if (e) {
@@ -745,15 +785,17 @@ app.post('/api/set-user-date', log_authorize, function(req, res) {
             rej("Lỗi database");
           }
           rows.forEach((x) => {
-            if (x.start <= data.start && data.end <= x.end) {
+            console.log(x, data.date);
+            if (x.start <= data.date && x.duration * 60000 <= diff(data.date, x.end) && diff(x.start, data.date) % (60000 * x.duration) === 0) {
+              dur = x.duration;
               res();
             }
           });
-          rej("Thời gian chọn không nằm trong lịch rảnh");
+          rej("Thời gian chọn không hợp lệ");
         });
       });
       await new Promise((res, rej) => {
-        db.run(`update date_target set start = ?, end = ? where idx = ? and id = ?`, [data.start, data.end, data.id, req.session.key], (e) => {
+        db.run(`update date_target set start = ?, end = ? where idx = ? and id = ?`, [data.date, shift(data.date, dur), data.id, req.session.key], (e) => {
           if (e) {
             console.error("update ", e);
             rej("Lỗi database");
@@ -864,15 +906,17 @@ app.post('/api/change-date', log_authorize, uf.upload.array('file-document'), fu
 });
 
 app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),function(req, res) {
-  // console.log(req.body);
-  // console.log(req.files);
+   console.log(req.body);
+   console.log(req.files);
   if (req.body.time && req.body.desc && req.body.target) {
     for (let i = 0; i < req.body.time.length; i += 2) {
-      if (!(req.body.time[i] && req.body.time[i+1] && req.body.time[i] <= req.body.time[i + 1])) {
-        req.body.time[i] = req.body.time[i+1] = '';
+      if (!(req.body.time[i] && req.body.time[i+1] && req.body.duration[i / 2] && req.body.duration[i/2] > 0 && diff(req.body.time[i], req.body.time[i + 1]) >= req.body.duration[i / 2] * 60000)) {
+        req.body.time[i] = req.body.time[i+1] = req.body.duration[i/2] = '';
       }
     }
     req.body.time = req.body.time.filter(x => x);
+    req.body.duration = req.body.duration.filter(x => x).map((x, i) => [req.body.time[2 * i], req.body.time[2 * i + 1], x]);
+    console.log(req.body.duration);
     if (req.body.time.length === 0) {
       deleteFile(req.files);
       return res.status(508).json({message: "Không tồn tại thời gian hợp lệ"});
@@ -917,7 +961,7 @@ app.post('/api/set-date', log_authorize, uf.upload.array('file-document'),functi
           });
         });
         await new Promise((res, rej) => {
-          db.run(`insert into date_book values ${`(${id}, ?, ?),`.repeat(req.body.time.length/2).slice(0, -1)}`, req.body.time, (e) => {
+          db.run(`insert into date_book values ${`(${id}, ?, ?, ?),`.repeat(req.body.time.length/2).slice(0, -1)}`, req.body.duration.flat(3), (e) => {
             if (e) {
               console.error("date_book", e.message);
               rej("Lỗi database");

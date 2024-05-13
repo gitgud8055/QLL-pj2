@@ -39,8 +39,9 @@
                     <div class="hidden"> 
                       <% value.date.sort((x, y) => {return x < y ? -1 : 1}) %>
                       <% for (let i = 0; i < value.date.length; i++) { %>
-                        <div><%- value.date[i][0] %> </div>
-                        <div><%- value.date[i][1] %> </div>
+                        <div><%- value.date[i][0] %></div>
+                        <div><%- value.date[i][1] %></div>
+                        <div><%- value.date[i][2] %></div>
                       <% } %>
                     </div>
                     <div class="hidden">
@@ -162,6 +163,28 @@
           </div>
         </div>
       </div>
+      <div class=" fixed top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="date">
+        <div class=" p-1 w-full" >
+          <div class=" px-2 py-2 fw-bold fs-5 text-primary flex justify-center">
+            <div class="">
+              Đặt lịch cuộc hẹn
+            </div>
+          </div>
+          <div class="absolute top-0 right-0" id="off-d" style="z-index: 899;">
+            <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
+          </div>
+          <div>
+            <form class="w-full px-4 mt-3" id="form-date">
+              <div>Mã lịch hẹn: <span id="lOiMajcY"></span></div>
+              <div>Thời gian gặp mặt: </div>
+              <div id="PoKauJw"></div>
+            </form>
+            <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+              <button class="btn btn-primary" id="submit-date">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class=" fixed top-1/2 left-1/2 w-1/3 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="cc">
         <div class=" p-1 w-full" >
           <div class=" px-2 py-2 fw-bold fs-5 text-primary flex justify-center">
@@ -175,7 +198,7 @@
           <div>
             <form class="w-full px-4 mt-3" id="form-r">
               <div class="form-group">
-                <div>Thời điểm bắt đầu - kết thúc</div>
+                <div>Thời gian gặp mặt</div>
                 <div class="w-full flex flex-col" id="AkUkxmM">
                   
                 </div>
@@ -206,9 +229,9 @@
         <div>
           <form class="w-full px-4 mt-3" id="form-c">
             <div class="form-group">
-              <div>Thời điểm bắt đầu - kết thúc</div>
+              <div>Thời gian gặp mặt</div>
               <button type="button" class="btn btn-outline-primary" id="add-date-time"><ion-icon name="add-outline"></ion-icon></button>
-              <div class="w-full flex flex-wrap" id="WKjqoIuxJns">
+              <div class="w-full flex flex-col" id="WKjqoIuxJns">
                 
               </div>
             </div>
@@ -254,39 +277,54 @@
 		</div>
 	</div>
   <script>
+    $("#off-d").click(function() {$("#date").hide();});
     $("#set-table button").click(function() {
-      let par = $(this).closest("tr").find("td");
-      if ($(this).hasClass("btn-success")) {
-        let idx = par.eq(0).html();
-        let st = par.eq(1).find("input");
-        let ed = par.eq(2).find("input");
-        if (st.attr('data-set') !== st.val() || ed.attr('data-set') !== ed.val()) {
-          fetch('/api/set-user-date', {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({id: idx, start: st.val(), end: ed.val()})
-          }).then(async function(response) {
-            if (!response.ok) {
-              let x = await response.json();
-              throw new Error(`Error: ${x.message}`);
-            }
-            return response.json();
-          }).then(data => {alert(data.message); window.location.reload();}).catch(err => {alert(err.message);});
+      const tr_block = $(this).closest("tr").find("td");
+      $("#lOiMajcY").text(tr_block.eq(0).html());
+      $("#PoKauJw").text("");
+      fetch(`/api/get-date?id=${tr_block.eq(0).html()}`, {method: "GET"})
+      .then(async function(response) {
+        if (!response.ok) {
+          let x = await response.json();
+          throw new Error(`Error: ${x.message}`);
         }
-      }
-      $(this).toggleClass("btn-success");
-      $(this).text($(this).text() === "OK" ? "Chọn" : "OK");
-      for (let i of [1, 2]) {
-        let cur = par.eq(i);
-        if (cur.find("input").length > 0) {
-          cur.html(cur.find("input").attr('data-set'));
+        return response.json();
+      }).then(data => {
+        data.forEach((v, i) => {
+          $("#PoKauJw").append(`
+          <div class="input-group my-2">
+            <div class="input-group-text">
+              <input type="radio" id="cNjUai${i}" name="select-prefer-date" class="form-check-input" value="${i}">
+            </div>
+            <label class="input-group-text" for="cNjUai${i}">${v.st} - ${v.ed} (${v.dur} phút)</label>
+            <input type="datetime-local" class="form-control" name="date" min='${v.st}' max='${v.ed}' step='${v.dur * 60}' id="PaoKLhA${i}" disabled>
+          </div>`);
+        });
+        $("#PoKauJw input[type='radio']").click(function() {
+          $("#PoKauJw input[type='datetime-local']").prop('disabled', true);
+          $(`#PaoKLhA${$(this).val()}`).prop('disabled', false);
+        });
+        $("#PoKauJw input[type='datetime-local']").change(function() {
+          this.reportValidity();
+        });
+      }).catch(err => {alert(err.message);});
+
+      $("#date").show();
+    });
+
+    $("#submit-date").click(function() {
+      const data = new FormData( document.getElementById("form-date"));
+      data.append('id', $("#lOiMajcY").text());
+      fetch('/api/set-user-date', {
+        method: "POST",
+        body: data
+      }).then(async function(response) {
+        if (!response.ok) {
+          let x = await response.json();
+          throw new Error(`Error: ${x.message}`);
         }
-        else {
-          cur.html(`<input type="datetime-local" value='${cur.html()}' data-set='${cur.html()}'>`);
-        }
-      }
+        return response.json();
+      }).then(data => {alert(data.message); }).catch(err => {alert(err.message);});
     });
   </script>
   <script>
@@ -388,7 +426,7 @@
 		});
 		function bratuSLegs() {
 			const formData = new FormData(document.getElementById("form-c"));
-      $("#data-table tr").each(function(i, item) {
+      $("#data-table tr:not([class='skip'])").each(function(i, item) {
         if ($(item).hasClass("table-primary")) {
           formData.append('target[]', $(item).find("td").eq(1).attr('id'));
         }
@@ -430,10 +468,18 @@
       $("#addJaiuAjw ion-icon").toggleClass("RtkAjwQi");
     });
     $("#add-date-time").click(function() {
-      $("#WKjqoIuxJns").append(`<div class="w-full flex justify-between my-1" >
-        <input type="datetime-local" class="form-control" name="time[]" style=" width: 47%;">
-        <input type="datetime-local" class="form-control" name="time[]" style=" width: 47%">
-        <button type="button" class="btn btn-outline-danger" onclick="$(this).parent().remove();"><ion-icon name="trash-outline"></ion-icon></button>
+      $("#WKjqoIuxJns").append(`<div class="my-2" >
+        <div class="input-group mb-1">
+          <span class="input-group-text">Thời gian rảnh</span>
+          <input type="datetime-local" class="form-control" name="time[]" >
+          <input type="datetime-local" class="form-control" name="time[]" >
+        </div>
+        <div class="input-group">
+          <span class="input-group-text">Độ dài cuộc họp</span>
+          <input type="text" name="duration[]" class="form-control">
+          <span class="input-group-text">phút</span>
+          <button type="button" class="btn btn-outline-danger" onclick="$(this).parent().parent().remove();"><ion-icon name="trash-outline"></ion-icon></button>
+        </div>
       </div>`);
     });
     $("#add-date-time").click();
@@ -451,8 +497,8 @@
         list_file.push($(this).html());
       });
       $("#AkUkxmM, #BxhYtlPa, #KjYhjHat, #fdWjfkwiA").html("");
-      for (let i = 0; i < list_time.length; i += 2) {
-        $("#AkUkxmM").append(`<div> ${list_time[i]} - ${list_time[i + 1]} </div>`);
+      for (let i = 0; i < list_time.length; i += 3) {
+        $("#AkUkxmM").append(`<div> ${list_time[i]} - ${list_time[i + 1]} (${list_time[i + 2]} phút) </div>`);
       }
       for (let i = 0; i < list_file.length; i += 2) {
         $("#BxhYtlPa").append(`<div class="m-1 px-1 rounded flex flex-row cursor-pointer" style="border: 1px solid black;" data-id="${list_file[i + 1]}">${list_file[i]}<button type="button" ><ion-icon name="close-outline"></ion-icon></button></div>`);
@@ -478,7 +524,7 @@
     function add_class(name, cid, cn, course, mail, id) {
       $("#data-table").append(`<tr >
         <td>${id}</td>
-        <td id="Row${id}">${name}</td>
+        <td id="${id}">${name}</td>
         <td>${cid}</td>
         <td>${cn}</td>
         <td>${course}</td>
