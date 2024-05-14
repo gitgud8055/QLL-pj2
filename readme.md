@@ -101,7 +101,7 @@ npm run dev
   - Giả sử cuộc họp có độ dài 25 phút và thời gian bắt đầu do owner đặt là 12h00. Khi đó user chỉ có thể đặt thời gian bắt đầu hẹn là 12h00, 12h25, 12h50, ...
   
 ### 4.4 Đặt lịch hẹn
-![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/d14817c1-d517-4d01-beca-cbfe2fda4342)
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/35b73620-226f-42fc-817f-a3446e952c1f)
 - Thời điểm bắt đầu - kết thúc: Những thời gian rảnh của user có thể đặt lịch. Nếu có nhiều khoảng thời gian rảnh, thêm bằng cách click vào nút +. Còn nếu như viết sai, có thể ấn vào nút "thùng rác" để loại bỏ
 - Độ dài cuộc họp: Độ dài của cuộc họp tính theo phút
 - Nội dung: thông báo đến cho những user được chọn
@@ -110,10 +110,18 @@ npm run dev
 - Click vào nút "Done" để xác nhận lịch, hệ thống sẽ thông báo nếu có lỗi phát sinh
 
 ### 4.5 Danh sách sinh viên/ giảng viên
-![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/a5b4a2e4-dacb-4e46-997d-6e94e42f55a7)
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/cd611d36-3d33-4390-8d2d-665aaa41f31f)
 - Click vào phần tên sinh viên/ giảng viên để xem thông tin chi tiết
 - User sẽ chọn những user để gửi lịch hẹn đi bằng cách click vào hàng của user tương ứng. Khi đó, hàng của user được gửi đi sẽ được highlight màu xanh blue (như trong hình). Click vào hàng những user đó một lần nữa để hủy
 - Để giảm thiểu thời gian chọn lọc user, trang web cung cấp phím tắt "Shift". Khi bấm "Shift", tất cả những hàng khi di chuột qua sẽ được chọn. Bấm "Shift" một lần nữa để hủy bỏ mode này.
+
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/910a9f35-3643-437e-991c-a33c23a037ce)
+- Để thêm sinh viên mới (chỉ có giảng viên mới có quyền), Ấn vào nút "Add". Khi đó, sẽ có phần trống ở đầu để điền thông tin sinh viên.
+- Những thông tin về lớp và sinh viên sẽ được đính kèm khi có MSSV và mã lớp
+
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/e3c81629-358a-44b6-9511-2d5bf89d9aeb)
+- Có thể thêm nhiều sinh viên cùng lúc bằng file csv, hệ thống sẽ tự động thêm các sinh viên và lọc đi những sinh viên có MSSV hoặc mã lớp không hợp lệ
+- Hệ thống chỉ chấp nhận file .csv (như trong hình)
 
 
 
