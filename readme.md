@@ -2,7 +2,8 @@
 
 ## Giới thiệu
 - Trang web này dùng để tạo và quản lý lịch hẹn của cá nhân, cũng như lịch hẹn giữa sinh viên và giảng viên.
-- Lần sửa đổi cuối: 6/4/2024
+- Được thiết kế để có thể sử dụng trên cả mobile và PC
+- Lần sửa đổi cuối: 14/5/2024
 
 ## Cách host trang web
 - Tải Nodejs và npm (nếu chưa có)
@@ -79,18 +80,30 @@ npm run dev
 - Chỉ có chủ cuộc hẹn mới có quyền sửa đổi nội dung cuộc hẹn
 
 ### 4.2 Lịch hẹn đã gửi
-![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/368d4f3a-e1e1-424b-bac6-b5da7eaddeb0)
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/5d9c1940-b59f-4286-aff5-2359b08cc594)
 - Nếu user nào chưa quyết định lịch hẹn thì ô "thời điểm bắt đầu" và "thời điểm kết thúc" sẽ được bỏ trống
+- Ghi chú: Những note của user trong cuộc hẹn (các user khác không thể xem được)
+  
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/0f578e58-df2f-408f-a1c7-4d657a024cab)
+- Ấn vào ô ghi chú tương ứng sẽ hiện ra bảng chỉnh sửa nội dung note
+- Click vào nút "Done" để lưu thay đổi
 
 ### 4.3 Lịch hẹn đã nhận
-![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/b72e6965-1741-4b5e-ac59-565cd6d540db)
-- Click vào nút "Chọn" để có thể lựa chọn thời gian gặp mặt
-- Sau đó, user có thể sửa đổi "Thời điểm bắt đầu" và "Thời điểm kết thúc"
-- Click vào nút "OK" để lưu những thay đổi (sẽ nhận được thông báo nếu thay đổi thành công)
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/0c6cb9e6-9b2e-4a82-8a84-9f414fa4de9b)
+- Bao gồm thời điểm bắt đầu, thời điểm kết thúc (do user này chọn) và ghi chú
+- Phần ghi chú tương tự với với phần 4.2 (có thể chỉnh sửa nội dung)
 
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/5f1b4b83-2542-4c3d-ae82-8f94aa7fb087)
+- Khi ấn vào nút "Chọn", bảng lựa chọn thời gian gặp mặt sẽ hiện lên như hình
+- User sẽ chọn 1 trong những mốc thời gian chỉ định và chọn thời gian bắt đầu trong khoảng đó
+- Chú ý:
+  - Cuộc họp sẽ được chia ra thành các khoảng có độ dài được owner cho trước. Do đó thời gian kết thúc sẽ được tùy chọn dựa trên thời gian bắt đầu và độ dài cuộc họp.
+  - Giả sử cuộc họp có độ dài 25 phút và thời gian bắt đầu do owner đặt là 12h00. Khi đó user chỉ có thể đặt thời gian bắt đầu hẹn là 12h00, 12h25, 12h50, ...
+  
 ### 4.4 Đặt lịch hẹn
-![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/c46a1597-57ed-483e-8a23-e9b5f0543883)
+![image](https://github.com/gitgud8055/QLL-pj2/assets/151536929/d14817c1-d517-4d01-beca-cbfe2fda4342)
 - Thời điểm bắt đầu - kết thúc: Những thời gian rảnh của user có thể đặt lịch. Nếu có nhiều khoảng thời gian rảnh, thêm bằng cách click vào nút +. Còn nếu như viết sai, có thể ấn vào nút "thùng rác" để loại bỏ
+- Độ dài cuộc họp: Độ dài của cuộc họp tính theo phút
 - Nội dung: thông báo đến cho những user được chọn
 - File đính kèm: thêm những file cần thiết trước cuộc gặp mặt
 - Danh sách user gửi đến: Chọn trong danh sách ở mục 4.5
