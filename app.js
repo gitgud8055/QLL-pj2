@@ -137,8 +137,8 @@ app.get('/class', log_authorize, function(req, res) {
         try {
           let data;
           await new Promise((res, rej) => {
-            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.name, i.email from (select class_id, Tid from learn where id = ?) l 
-            join class c on l.class_id = c.class_id join information i where i.id = l.Tid`, 
+            db.all(`select i.id, l.class_id as cid, l.class_name as cn, l.course_id as course, i.name, i.email from (select * from learns where id = ?) l 
+            join information i where i.id = l.Tid`, 
             [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
@@ -167,7 +167,6 @@ app.get('/class', log_authorize, function(req, res) {
                 console.error(e.message);
                 rej("Lỗi database");
               }
-              user_pend = rows;
               pending = Array.from(rows, (x) => x.idx);
               res();
             });
@@ -233,6 +232,16 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')})) dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, pending, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              user_pend = rows;
+              res();
+            });
+          });
           res.render(`${__dirname}/views/class-student.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
           data: data, info: date_info, wait: user_wait, pend: user_pend});
         } catch (e) {
@@ -246,8 +255,8 @@ app.get('/class', log_authorize, function(req, res) {
         try {
           let data;
           await new Promise((res, rej) => {
-            db.all(`select i.id, c.class_id as cid, c.class_name as cn, c.course_id as course, i.role, i.pos as position, i.name
-            from (select class_id, id from learn where Tid = ?) t join class c on t.class_id = c.class_id join information i on i.id = t.id`, 
+            db.all(`select i.id, t.class_id as cid, t.class_name as cn, t.course_id as course, i.role, i.pos as position, i.name
+            from (select * from learns where Tid = ?) t join information i on i.id = t.id`, 
             [req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
@@ -276,7 +285,6 @@ app.get('/class', log_authorize, function(req, res) {
                 console.error(e.message);
                 rej("Lỗi database");
               }
-              user_pend = rows;
               pending = Array.from(rows, (x) => x.idx);
               res();
             });
@@ -342,6 +350,17 @@ app.get('/class', log_authorize, function(req, res) {
               res();
             });
           });
+          
+          await new Promise((res, rej) => {
+            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')})) dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, pending, (e, rows) => {
+              if (e) {
+                console.error(e.message);
+                rej("Lỗi database");
+              }
+              user_pend = rows;
+              res();
+            });
+          });
           res.render(`${__dirname}/views/class-teacher.ejs`, {root: __dirname, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
           data: data, info: date_info, wait: user_wait, pend: user_pend});
         } catch (e) {
@@ -353,19 +372,29 @@ app.get('/class', log_authorize, function(req, res) {
     else if (req.session.authority === "admin") {
       db.serialize(async function() {
         try {
-          let account;
+          let account, cl;
           await new Promise((res, rej) => {
             db.all(`select * from ((select id, username, password, authority from account) a join information i on i.id = a.id)`, (e, rows) => {
               if (e) {
-                console.error("select account");
+                console.error("select account ", e);
                 rej("Lỗi database");
               }
               account = rows;
               res();
             });
           });
+          await new Promise((res, rej) => {
+            db.all(`select * from class`, (e, rows) => {
+              if (e) {
+                console.error("select class ", e);
+                rej("Lỗi database");
+              }
+              cl = rows;
+              res();
+            });
+          });
           res.render(`${__dirname}/views/class-admin.ejs`, {root: __dirname, username: req.session.username, link: `/source/image/${req.session.avatar}`, title: 'Danh sách',
-          account: account});
+          account: account, teach: cl});
         }
         catch (e) {
           res.status(513).json({message: e});
@@ -438,33 +467,7 @@ app.post('/api/add-class', log_authorize, function(req, res, next) {
       });
 
       await new Promise((res, rej) => {
-        db.all(`select authority from account where id = ?`, [data[3]], (e, rows) => {
-          if (e) {
-            console.error("select account", e.message);
-            return rej("Lỗi database");
-          }
-          if (rows.length !== 1) {
-            return rej("Không tồn tại giảng viên này");
-          }
-          if (rows[0].authority !== "teacher") {
-            return rej("ID này không thuộc về giảng viên");
-          }
-          res();
-        });
-      });
-
-      await new Promise((res, rej) => {
         db.run(`insert into class values (?, ?, ?)`, [data[0], data[1], data[2]], (e) => {
-          if (e) {
-            console.error("insert class", e.message);
-            rej("Lỗi database");
-          }
-          res();
-        });
-      });
-
-      await new Promise((res, rej) => {
-        db.run(`insert into teach values (?, ?)`, [data[3], data[0]], (e) => {
           if (e) {
             console.error("insert class", e.message);
             rej("Lỗi database");
@@ -508,7 +511,7 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
   const data = req.body;
   console.log(data, req.file);
 
-  if (!data || (!req.file && (!data.id || !data.id_class))) {
+  if (!data || (!req.file && (!data.id || !data.id_class || !data.id_course || !data.class_name))) {
     if (req.file) deleteFile([req.file]);
     return res.status(516).json({message: "Thiếu thông tin"});
   }
@@ -521,13 +524,13 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
       }
 
       const infor = fs.readFileSync(req.file.path, 'utf8').split('\n').map((v) => v.split(','));
-      console.log(infor);
+      //console.log(infor);
       const position = [];
-      for (let x of ["MSSV", "classID"]) {
-        let id = infor[0].findIndex(v => v === x);
+      for (let x of ["MSSV", "classID", "className", "courseID"]) {
+        let id = infor[0].findIndex(v => v.toLowerCase() === x.toLowerCase());
         if (id !== -1) position.push(id);
         else {
-          throw new Error("Thiếu thông tin cần thiết");
+          throw new Error("Một số cột cần thiết trong file bị thiếu");
         }
       }
 
@@ -555,7 +558,7 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
     }
   }
   else {
-    list_name.push([data.id, data.id_class]);
+    list_name.push([data.id, data.id_class, data.class_name, data.id_course]);
   }
 
   db.serialize(async function() {
@@ -585,29 +588,31 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
         });
       });
 
-      await new Promise((res, rej) => {
-        db.all(`select class_id from class where class_id in (${list_name.map(v => '?').join(',')})`, list_name.map(v => v[1]), (e, rows) => {
-          if (e) {
-            console.error("select class ", e.message);
-            rej("Lỗi database");
-          }
-          let cur = new Set(rows.map(v => v.class_id));
-          list_name = list_name.filter(v => cur.has(v[1]));
-          if (rows.length === 0) {
-            rej("Không tồn tại dữ liệu hợp lệ")
-          }
-          res();
-        });
-      });
+      // await new Promise((res, rej) => {
+      //   db.all(`select class_id from class where class_id in (${list_name.map(v => '?').join(',')})`, list_name.map(v => v[1]), (e, rows) => {
+      //     if (e) {
+      //       console.error("select class ", e.message);
+      //       rej("Lỗi database");
+      //     }
+      //     let cur = new Set(rows.map(v => v.class_id));
+      //     list_name = list_name.filter(v => cur.has(v[1]));
+      //     if (rows.length === 0) {
+      //       rej("Không tồn tại dữ liệu hợp lệ")
+      //     }
+      //     res();
+      //   });
+      // });
 
       await new Promise((res, rej) => {
-        db.all(`select id from learn where Tid = ? and id in (${list_name.map(v => '?').join(',')})`, [req.session.key , ...list_name.map(v => v[0])], (e, rows) => {
+        db.all(`select id, class_id from learns where Tid = ? and id in (${list_name.map(v => '?').join(',')})`, [req.session.key , ...list_name.map(v => v[0])], (e, rows) => {
           if (e) {
             console.error("select information2 ", e.message);
             rej("Lỗi database");
           }
-          let cur = new Set(rows.map(v => v.id));
-          list_name = list_name.filter(v => !cur.has(v[0]));
+          let cur = new Set(rows.map(v => JSON.stringify([v.id, v.class_id])));
+          // console.log(cur);
+          // console.log(list_name);
+          list_name = list_name.filter(v => !cur.has(JSON.stringify([v[0], v[1]])));
           if (list_name.length === 0) {
             rej("Không tồn tại dữ liệu hợp lệ")
           }
@@ -616,7 +621,7 @@ app.post('/api/add-student', log_authorize, function(req, res, next) {
       });
 
       await new Promise((res, rej) => {
-        db.run(`insert into learn(id, Tid, class_id) values ${list_name.map(v => `(?, '${req.session.key}', ?)`).join(',') }`, list_name.flat(3), (e, rows) => {
+        db.run(`insert into learns(id, Tid, class_id, class_name, course_id) values ${list_name.map(v => `(?, '${req.session.key}', ?, ?, ?)`).join(',') }`, list_name.flat(3), (e, rows) => {
           if (e) {
             console.error("insert ", e.message);
             rej("Lỗi database");

@@ -14,7 +14,7 @@
       <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="date-list">
           <div class="mr-auto">
-            Thông tin lịch hẹn
+            Thông tin lịch hẹn chung
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
@@ -61,7 +61,7 @@
       <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="get-list">
           <div class="mr-auto">
-            Lịch hẹn đã gửi
+            Lịch hẹn
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
@@ -71,7 +71,7 @@
               <tr>
                 <th>#</th>
                 <th>ID</th>
-                <th>Người nhận</th>
+                <th>Đối tác</th>
                 <th>Thời điểm bắt đầu</th>
                 <th>Thời điểm kết thúc</th>
                 <th>Ghi chú</th>
@@ -88,12 +88,23 @@
                   <td class="noted-v1"><%- v.note %></td>
                 </tr>
               <% } %>
+              <% for (let v of pend) { %>
+                <tr>
+                  <td><%- v.idx %></td>
+                  <td><%- v.id_owner %></td>
+                  <td><%- v.name %></td>
+                  <td><%- v.start %></td>
+                  <td><%- v.end %></td>
+                  <td class="noted-v2"><%- v.noteTo %></td>
+                  <td><button class="btn btn-primary">Chọn</button></td>
+                </tr>
+              <% } %>
             </tbody>
           </table>
         </div>
       </div>
 
-      <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+      <!-- <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="set-list">
           <div class="mr-auto">
             Lịch hẹn đã nhận
@@ -123,7 +134,7 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </div> -->
 
       <style>
         #form-c > div, #form-r > div, #form-i > div {
@@ -274,18 +285,20 @@
             </thead>
             <tbody id="data-table">
               <tr class="skip" style="display: none;" id="add-student">
+                <td><input type="text" class="w-full" id="input-student" placeholder="MSSV"></td>
                 <td><input type="text" class="w-full" id="input-class" placeholder="Mã lớp"></td>
+                <td><input type="text" class="w-full" id="input-className" placeholder="Tên lớp"></td>
                 <td>
                   <form id="student-list" enctype="multipart/form-data" class="flex flex-row gap-1">
-                    <input type="text" class="w-full" id="input-student" name="id" placeholder="MSSV">
+                    <input type="text" class="w-full" name="id_course" placeholder="Mã học phần">
                     <input type="file" name="file" id="add-student-file" class="hidden">
                     <div class=" group/guide">
                       <button id="pick-file"><ion-icon name="document-outline" class=" text-2xl"></ion-icon></button>
-                      <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/guide:block text-wrap w-52" style="transform: translate(-50%, -130%);">Chỉ chấp nhận file csv và những thông tin ở cột "MSSV" và "classID" sẽ được thêm vào tương ứng với MSSV và Mã lớp</span>
+                      <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/guide:block text-wrap" style="transform: translate(-50%, -130%); width: min(50%, 300px);">Chỉ chấp nhận file csv <br> Những thông tin ở cột "MSSV", "classID", "className", "courseID" sẽ được thêm vào tương ứng với MSSV, mã lớp, tên lớp và mã học phần</span>
                     </div>
                   </form>
                 </td>
-                <td colspan="5">
+                <td colspan="3">
                   <div class="flex flex-row gap-1" >
                     <button class="btn btn-success" id="submit-add-student">Done</button>
                     <button class="btn btn-danger" id="del-add-student"><ion-icon name="trash-outline"></ion-icon></button>
@@ -301,7 +314,7 @@
 	</div>
   <script>
     $("#off-d").click(function() {$("#date").hide();});
-    $("#set-table button").click(function() {
+    $("#get-table button").click(function() {
       const tr_block = $(this).closest("tr").find("td");
       $("#lOiMajcY").text(tr_block.eq(0).html());
       $("#PoKauJw").text("");
@@ -606,6 +619,8 @@
     $("#submit-add-student").click(function() {
       const data = new FormData(document.getElementById("student-list"));
       data.append('id_class', $("#input-class").val());
+      data.append('class_name', $("#input-className").val());
+      data.append('id', $("#input-student").val());
       for (const [n, v] of data.entries()) {
         console.log(n, v);
       }

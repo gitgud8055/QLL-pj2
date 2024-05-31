@@ -70,12 +70,10 @@
                 <th>#</th>
                 <th>Tên lớp</th>
                 <th>Mã học phần</th>
-                <th>Mã GV phụ trách</th>
               </tr>
             </thead>
             <tbody id="class-table">
               <tr class="skip" style="display: none;" id="add-class">
-                <td><input type="text" class="w-full" ></td>
                 <td><input type="text" class="w-full" ></td>
                 <td><input type="text" class="w-full" ></td>
                 <td><input type="text" class="w-full" ></td>
@@ -89,56 +87,6 @@
                 <td><%- v.class_id %></td>
                 <td><%- v.class_name %></td>
                 <td><%- v.course_id %></td>
-                <td><%- v.id %></td>
-              </tr>
-              <% }%>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-	  <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
-        <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="learn-list">
-          <div class="mr-auto">
-            Danh sách sinh viên
-          </div>
-          <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
-        </div>
-        <div class="py-2">
-          <button class="btn btn-primary items-center flex flex-row" id="button-add-student"><ion-icon name="add-outline"></ion-icon> <span class=" pl-1">Add</span></button>
-        </div>
-        <div class="table-responsive ">
-          <table class="table table-bordered" id="learnTable">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Mã sinh viên</th>
-				        <th>Tên sinh viên</th>
-              </tr>
-            </thead>
-            <tbody id="learn-table">
-              <tr class="skip" style="display: none;" id="add-student">
-                <td><input type="text" class="w-full" ></td>
-                <td>
-                  <form id="student-list" enctype="multipart/form-data" class="flex flex-row gap-1">
-                    <input type="text" class="w-full" id="input-student" name="id">
-                    <input type="file" name="file" id="add-student-file" class="hidden">
-                    <div class=" group/guide">
-                      <button id="pick-file"><ion-icon name="document-outline" class=" text-2xl"></ion-icon></button>
-                      <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/guide:block" style="transform: translate(-50%, -150%);">Chỉ chấp nhận file csv và những MSSV ở cột có tên "MSSV" sẽ được thêm vào</span>
-                    </div>
-                  </form>
-                </td>
-                <td class="flex flex-row gap-1">
-                  <button class="btn btn-success" id="submit-add-student">Done</button>
-                  <button class="btn btn-danger" id="del-add-student"><ion-icon name="trash-outline"></ion-icon></button>
-                </td>
-              </tr>
-              <% for (let v of learn) { %>
-              <tr>
-                <td><%- v.class_id %></td>
-                <td><%- v.id %></td>
-				        <td><%- v.name %></td>
               </tr>
               <% }%>
             </tbody>

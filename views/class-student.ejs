@@ -14,7 +14,7 @@
       <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="date-list">
           <div class="mr-auto">
-            Thông tin lịch hẹn
+            Thông tin lịch hẹn chung
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
@@ -61,7 +61,7 @@
       <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="get-list">
           <div class="mr-auto">
-            Lịch hẹn đã gửi
+            Lịch hẹn
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
@@ -71,7 +71,7 @@
               <tr>
                 <th>#</th>
                 <th>ID</th>
-                <th>Người nhận</th>
+                <th>Đối tác</th>
                 <th>Thời điểm bắt đầu</th>
                 <th>Thời điểm kết thúc</th>
                 <th>Ghi chú</th>
@@ -88,12 +88,23 @@
                   <td class="noted-v1"><%- v.note %></td>
                 </tr>
               <% } %>
+              <% for (let v of pend) { %>
+                <tr>
+                  <td><%- v.idx %></td>
+                  <td><%- v.id_owner %></td>
+                  <td><%- v.name %></td>
+                  <td><%- v.start %></td>
+                  <td><%- v.end %></td>
+                  <td class="noted-v2"><%- v.noteTo %></td>
+                  <td><button class="btn btn-primary">Chọn</button></td>
+                </tr>
+              <% } %>
             </tbody>
           </table>
         </div>
       </div>
 
-      <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+      <!-- <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="set-list">
           <div class="mr-auto">
             Lịch hẹn đã nhận
@@ -123,7 +134,7 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </div> -->
 
       <style>
         #form-c > div, #form-r > div, #form-i > div {
@@ -278,7 +289,7 @@
 	</div>
   <script>
     $("#off-d").click(function() {$("#date").hide();});
-    $("#set-table button").click(function() {
+    $("#get-table button").click(function() {
       const tr_block = $(this).closest("tr").find("td");
       $("#lOiMajcY").text(tr_block.eq(0).html());
       $("#PoKauJw").text("");
