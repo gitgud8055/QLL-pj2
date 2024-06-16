@@ -11,7 +11,7 @@
 		<div class=" h-full max-w-full flex-1">
 			<%- include(root + '/views/template/navbar.ejs') %>
 
-      <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+      <!-- <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="date-list">
           <div class="mr-auto">
             Thông tin lịch hẹn chung
@@ -56,7 +56,7 @@
             </tbody>
           </table>
         </div>
-      </div>
+      </div> -->
 
       <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="get-list">
@@ -72,8 +72,8 @@
                 <th>#</th>
                 <th>ID</th>
                 <th>Đối tác</th>
-                <th>Thời điểm bắt đầu</th>
-                <th>Thời điểm kết thúc</th>
+                <th>Bắt đầu</th>
+                <th>Kết thúc</th>
                 <th>Ghi chú</th>
               </tr>
             </thead>
@@ -86,6 +86,24 @@
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
                   <td class="noted-v1"><%- v.note %></td>
+                  <td style="color: blue; text-decoration: underline; " class="date-detail cursor-pointer">Detail
+                    <div class="hidden"> 
+                      <% let value = info[v.idx] %>
+                      <% value.date.sort((x, y) => {return x < y ? -1 : 1}) %>
+                      <% for (let i = 0; i < value.date.length; i++) { %>
+                        <div><%- value.date[i][0] %></div>
+                        <div><%- value.date[i][1] %></div>
+                        <div><%- value.date[i][2] %></div>
+                      <% } %>
+                    </div>
+                    <div class="hidden">
+                      <% for (let i = 0; i < value.file.length; i++) { %>
+                        <div><%- value.file[i][0] %></div>
+                        <div><%- value.file[i][1] %></div>
+                      <% } %>
+                    </div>
+                    <div class="hidden"><%- value.note %></div>
+                  </td>
                 </tr>
               <% } %>
               <% for (let v of pend) { %>
@@ -96,6 +114,24 @@
                   <td><%- v.start %></td>
                   <td><%- v.end %></td>
                   <td class="noted-v2"><%- v.noteTo %></td>
+                  <td style="color: blue; text-decoration: underline; " class="date-detail cursor-pointer">Detail
+                    <div class="hidden"> 
+                      <% let value = info[v.idx] %>
+                      <% value.date.sort((x, y) => {return x < y ? -1 : 1}) %>
+                      <% for (let i = 0; i < value.date.length; i++) { %>
+                        <div><%- value.date[i][0] %></div>
+                        <div><%- value.date[i][1] %></div>
+                        <div><%- value.date[i][2] %></div>
+                      <% } %>
+                    </div>
+                    <div class="hidden">
+                      <% for (let i = 0; i < value.file.length; i++) { %>
+                        <div><%- value.file[i][0] %></div>
+                        <div><%- value.file[i][1] %></div>
+                      <% } %>
+                    </div>
+                    <div class="hidden"><%- value.note %></div>
+                  </td>
                   <td><button class="btn btn-primary">Chọn</button></td>
                 </tr>
               <% } %>
@@ -230,21 +266,66 @@
           </div>
         </div>
       </div>
-      <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
+
+      <div class=" fixed top-1/2 left-1/2 w-3/5 min-w-[438px] h-auto flex flex-col items-center rounded-md bg-[#cacedb] overflow-y-auto" style=" max-height: 90%;transform: translate(-50%, -50%); border: 1px solid black; z-index: 998; display: none; " id="ad">
+        <div class=" p-1 w-full" >
+          <div class=" px-2 py-2 fw-bold fs-5 text-primary flex justify-center">
+            <div class="">
+              Gửi lịch rảnh
+            </div>
+          </div>
+          <div class="absolute top-0 right-0 off-ad" style="z-index: 899;">
+            <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
+          </div>
+          <div>
+            <form class="w-full px-4 mt-3" id="form-c">
+              <div class="form-group">
+                <button type="button" class="btn btn-outline-primary" id="add-date-time"><ion-icon name="add-outline"></ion-icon></button>
+                <div class="w-full flex flex-col" id="WKjqoIuxJns">
+                  
+                </div>
+              </div>
+              <div>
+                Người nhận <span class="group/popup">
+                  <ion-icon name="help-circle-outline"></ion-icon>
+                  <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/popup:block text-wrap " style="transform: translate(-0%, -130%); width: min(50%, 200px);">Chọn danh sách người nhận trong danh sách bên dưới</span>
+                </span>
+              </div>
+              <div class="form-group">
+                <div>Nội dung</div>
+                <textarea name="desc" id="desc" cols="" rows="6" class="w-full rounded py-1 px-2 form-control" value=""></textarea>
+                <input type="file" class=" hidden" id="file-input" name="file-document" multiple>
+                <button type="button" class="mt-2" onclick="document.getElementById('file-input').click()"><ion-icon name="document-outline" style="font-size: 1.5rem;"></ion-icon></button>
+                <div id="file-preview" class=" flex flex-wrap flex-row"></div>
+              </div>
+            </form>
+            <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
+              <button class="btn btn-primary" id="submit-cc">Done</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- <div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="addJaiuAjw">
           <div class="mr-auto">
-            Đặt lịch hẹn
+            Gửi lịch rảnh
           </div>
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
         <div>
           <form class="w-full px-4 mt-3" id="form-c">
             <div class="form-group">
-              <div>Thời gian gặp mặt</div>
               <button type="button" class="btn btn-outline-primary" id="add-date-time"><ion-icon name="add-outline"></ion-icon></button>
               <div class="w-full flex flex-col" id="WKjqoIuxJns">
                 
               </div>
+            </div>
+            <div>
+              Người nhận <span class="group/popup">
+                <ion-icon name="help-circle-outline"></ion-icon>
+                <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/popup:block text-wrap" style="transform: translate(-20%, -150%); width: min(50%, 300px);">Chọn danh sách người nhận trong danh sách bên dưới</span>
+              </span>
             </div>
             <div class="form-group">
               <div>Nội dung</div>
@@ -258,7 +339,7 @@
             <button class="btn btn-primary" id="submit-cc">Done</button>
           </div>
         </div>
-      </div>
+      </div> -->
 
 			<div class=" p-1 mx-2 mt-2" style="border: 1px solid black;">
         <div class=" px-2 py-2 fw-bold text-primary flex hover:bg-slate-200 cursor-pointer" id="title-list">
@@ -268,12 +349,49 @@
           <div class=" mr-2"><ion-icon name="chevron-up-outline"></ion-icon></div>
         </div>
         <div class="py-2">
-          <button class="btn btn-primary items-center flex flex-row" id="button-add-student"><ion-icon name="add-outline"></ion-icon> <span class=" pl-1">Add</span></button>
+          <div class="flex flex-row gap-2">
+            <button class="btn btn-primary items-center flex flex-row" id="button-add-student"><ion-icon name="add-outline"></ion-icon> <span class=" pl-1">Add student</span></button>
+            <button class="btn btn-primary" id="button-add-ad"><ion-icon name="calendar-outline"></ion-icon>  Add meeting</button>
+          </div>
+        </div>
+        <div>
+          <div class="skip flex gap-2 py-2" style="display: none;" id="add-student">
+            <div class="input-group">
+              <div class="input-group-text">MSSV</div>
+              <input type="text" class="w-full form-control" id="input-student" placeholder="MSSV">
+            </div>
+            <div class="input-group">
+              <div class="input-group-text">Mã lớp</div>
+              <input type="text" class="w-full form-control" id="input-class" placeholder="Mã lớp">
+            </div>
+            <div class="input-group">
+              <div class="input-group-text">Tên lớp</div>
+              <input type="text" class="w-full form-control" id="input-className" placeholder="Tên lớp">
+            </div>
+            <div class="input-group">
+              <form id="student-list" enctype="multipart/form-data" class="flex flex-row gap-1">
+                <div class="input-group-text">Mã học phần</div>
+                <input type="text" class="w-full form-control" name="id_course" placeholder="Mã học phần">
+                <input type="file" name="file" id="add-student-file" class="hidden">
+                <div class=" group/guide">
+                  <button id="pick-file"><ion-icon name="document-outline" class=" text-2xl"></ion-icon></button>
+                  <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/guide:block text-wrap" style="transform: translate(-50%, -130%); width: min(50%, 300px);">Chỉ chấp nhận file csv <br> Những thông tin ở cột "MSSV", "classID", "className", "courseID" sẽ được thêm vào tương ứng với MSSV, mã lớp, tên lớp và mã học phần</span>
+                </div>
+              </form>
+            </div>
+            <div>
+              <div class="flex flex-row gap-1" >
+                <button class="btn btn-success" id="submit-add-student">Done</button>
+                <button class="btn btn-danger" id="del-add-student"><ion-icon name="trash-outline"></ion-icon></button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="table-responsive ">
           <table class="table table-bordered" id="dataTable">
             <thead>
               <tr>
+                <th><input type="checkbox" id="select-all-box"></th>
                 <th>MSSV</th>
                 <th >Tên sinh viên</th>
                 <th>Mã lớp</th>
@@ -284,7 +402,7 @@
               </tr>
             </thead>
             <tbody id="data-table">
-              <tr class="skip" style="display: none;" id="add-student">
+              <!-- <tr class="skip" style="display: none;" id="add-student">
                 <td><input type="text" class="w-full" id="input-student" placeholder="MSSV"></td>
                 <td><input type="text" class="w-full" id="input-class" placeholder="Mã lớp"></td>
                 <td><input type="text" class="w-full" id="input-className" placeholder="Tên lớp"></td>
@@ -304,7 +422,7 @@
                     <button class="btn btn-danger" id="del-add-student"><ion-icon name="trash-outline"></ion-icon></button>
                   </div>
                 </td>
-              </tr>
+              </tr> -->
               
             </tbody>
           </table>
@@ -464,7 +582,7 @@
 			const formData = new FormData(document.getElementById("form-c"));
       $("#data-table tr:not([class='skip'])").each(function(i, item) {
         if ($(item).hasClass("table-primary")) {
-          formData.append('target[]', $(item).find("td").eq(1).attr('id'));
+          formData.append('target[]', $(item).find("td").eq(2).attr('id'));
         }
       });
 			for (const [n, v] of formData.entries()) {
@@ -550,8 +668,8 @@
         add($(this).parent().attr('data-id'));
         $(this).parent().remove();
       });
+      $("#OixHatQr").val(cur.eq(2).text());
       cur = $(this).parent().find("td");
-      $("#OixHatQr").val(cur.eq(3).text());
       add(cur.eq(0).text());
       $("#cc").show();
     });
@@ -559,6 +677,7 @@
   <script>
     function add_class(name, cid, cn, course, role, position, id) {
       $("#data-table").append(`<tr >
+        <td><input type="checkbox"></td>
         <td>${id}</td>
         <td id="${id}">${name}</td>
         <td>${cid}</td>
@@ -577,6 +696,17 @@
       <% } %>
     $("#data-table tr:not([class='skip'])").click(function() {
       $(this).toggleClass("table-primary");
+      let cur = $(this).find("input[type='checkbox']");
+      cur.prop('checked', $(this).hasClass("table-primary"));
+    });
+    $("#select-all-box").click(function() {
+      console.log($(this));
+      let cur = $(this).prop('checked');
+      $("#data-table tr:not([class='skip'], [style*='display: none'])").each((i, v) => {
+        if (cur != $(v).hasClass("table-primary")) {
+          $(v).click();
+        }
+      });
     });
     let SelectorAllElement = false;
     $("#data-table tr:not([class='skip'])").mouseover(function(event) {
@@ -637,8 +767,16 @@
       }).then(data => {alert(data.message); }).catch(err => {alert(err.message);});
     });
   </script>
+  <script>
+    $(".off-ad").click(function() {
+      $("#ad").hide();
+    });
+    $("#button-add-ad").click(function() {
+      $("#ad").show();
+    });
+  </script>
   <script src="/source/js/multisearch.js"></script>
-  <script>trigger_multisearch("dataTable");trigger_multisearch("dateTable");trigger_multisearch("getTable");trigger_multisearch("setTable");</script>
+  <script>trigger_multisearch("dataTable");trigger_multisearch("getTable");</script>
 	<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 	<script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
 </body>

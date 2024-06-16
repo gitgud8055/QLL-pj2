@@ -53,7 +53,8 @@ function trigger_multisearch(name) {
   for (let i = 0; i < number_column; i++) {
     finale += `<th> <input type="text" id="Filter${name}${i}" placeholder="Filter" class="w-full"> </th>`;
   }
-  tableHead.innerHTML += `<tr>${finale} </tr>`;
+  //tableHead.innerHTML += `<tr>${finale} </tr>`;
+  tableHead.insertAdjacentHTML('afterend', `<tr>${finale}</tr>`);
   for (let i = 0; i < list_name.length; i++) {
     document.getElementById(`Filter${name}${i}`).addEventListener("keyup", function () {
       FilterRemaster();

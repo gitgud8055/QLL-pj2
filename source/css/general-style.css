@@ -1028,3 +1028,7 @@ video {
 .group\/guide:hover .group-hover\/guide\:block {
   display: block;
 }
+
+.group\/popup:hover .group-hover\/popup\:block {
+  display: block;
+}

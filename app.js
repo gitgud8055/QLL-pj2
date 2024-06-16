@@ -233,7 +233,7 @@ app.get('/class', log_authorize, function(req, res) {
             });
           });
           await new Promise((res, rej) => {
-            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')})) dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, pending, (e, rows) => {
+            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')}) and id = ?)  dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, [...pending, req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
                 rej("Lỗi database");
@@ -352,7 +352,7 @@ app.get('/class', log_authorize, function(req, res) {
           });
           
           await new Promise((res, rej) => {
-            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')})) dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, pending, (e, rows) => {
+            db.all(`select * from (select * from date_target where idx in (${pending.map(() => '?').join(', ')}) and id = ?) dt join date_set ds on ds.idx = dt.idx  join (select id, name from information) i on ds.id_owner = i.id`, [...pending, req.session.key], (e, rows) => {
               if (e) {
                 console.error(e.message);
                 rej("Lỗi database");
