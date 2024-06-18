@@ -234,6 +234,15 @@
                   <ion-icon name="help-circle-outline"></ion-icon>
                   <span class=" absolute bg-[#616161] text-white text-center p-2 rounded-md hidden group-hover/popup:block text-wrap " style="transform: translate(-0%, -130%); width: min(50%, 200px);">Chọn danh sách người nhận trong danh sách bên dưới</span>
                 </span>
+                <div id="list-target" class="flex flex-row flex-wrap gap-2"></div>
+              </div>
+              <div>
+                <input type="text" list="target" id="add-target">
+                <datalist id="target">
+                  <% for (let i = 0; i < data.length; i++) { %>
+                    <option value= '[<%- data[i].id %>] - <%- data[i].name %>' ></option>
+                  <% } %>
+                </datalist>
               </div>
               <div class="form-group">
                 <div>Nội dung</div>
@@ -644,7 +653,6 @@
       cur.prop('checked', $(this).hasClass("table-primary"));
     });
     $("#select-all-box").click(function() {
-      console.log($(this));
       let cur = $(this).prop('checked');
       $("#data-table tr:not([class='skip'], [style*='display: none'])").each((i, v) => {
         if (cur != $(v).hasClass("table-primary")) {
@@ -669,7 +677,43 @@
       $("#ad").hide();
     });
     $("#button-add-ad").click(function() {
+      $("#list-target").html("");
+      $("#data-table tr:not([class='skip'])[class='table-primary']").each(function(i, item) {
+        let cur = $(item).find('td');
+        $("#list-target").append(`<div class="rounded-2xl px-2 flex flex-row" style="border: 1px solid black">[${cur.eq(1).text()}] - ${cur.eq(2).text()}<button type="button" data-id="${cur.eq(1).text()}"><ion-icon name="close-outline"></ion-icon></button></div>`);
+      });
+      $("#list-target button").click(function() {
+        let current = $(`#${$(this).attr('data-id')}`);
+        if (current.length && current.parent().length && current.parent().hasClass("table-primary")) {
+          current.parent().click();
+        }
+        $(this).parent().remove();
+      });
       $("#ad").show();
+    });
+
+    var counter = 0;
+    $("#add-target").keypress(function(event) {
+      if (event.key === "Enter") {
+        var cur = $(this).val();
+        let l = cur.indexOf('['), r = cur.indexOf(']');
+        if (l === -1 || l > r) return ;
+        var id = cur.slice(l + 1, r);
+        const comp = $(`#${id}`);
+        if (comp.length && comp.parent().length && !comp.parent().hasClass("table-primary")) {
+          comp.parent().click();
+          $("#add-target").val("");
+          $("#list-target").append(`<div class="rounded-2xl px-2 flex flex-row" style="border: 1px solid black">${cur}<button type="button" data-id="${id}" id="shike${counter}"><ion-icon name="close-outline"></ion-icon></button></div>`);
+          $(`#shike${counter}`).click(function() {
+            let current = $(`#${$(this).attr('data-id')}`);
+            if (current && current.parent() && current.parent().hasClass("table-primary")) {
+              current.parent().click();
+            }
+            $(this).parent().remove();
+          });
+          counter++;
+        }
+      }
     });
   </script>
   <script src="/source/js/multisearch.js"></script>
