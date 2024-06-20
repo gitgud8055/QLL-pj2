@@ -78,6 +78,7 @@
               </tr>
             </thead>
             <tbody id="get-table">
+              <% wait.sort((x, y) => {return parseInt(x.idx) < parseInt(y.idx) ? -1 : 1}) %>
               <% for (let v of wait) { %>
                 <tr>
                   <td><%- v.idx %></td>
@@ -106,6 +107,7 @@
                   </td>
                 </tr>
               <% } %>
+              <% wait.sort((x, y) => {return parseInt(x.idx) < parseInt(y.idx) ? -1 : 1}) %>
               <% for (let v of pend) { %>
                 <tr>
                   <td><%- v.idx %></td>
@@ -237,7 +239,10 @@
                 <div id="list-target" class="flex flex-row flex-wrap gap-2"></div>
               </div>
               <div>
-                <input type="text" list="target" id="add-target">
+                <div class="input-group">
+                  <span class="input-group-text">ID/Tên người nhận</span>
+                  <input type="text" list="target" id="add-target" class=" form-control">
+                </div>
                 <datalist id="target">
                   <% for (let i = 0; i < data.length; i++) { %>
                     <option value= '[<%- data[i].id %>] - <%- data[i].name %>' ></option>
@@ -270,10 +275,19 @@
             <button class="btn btn-normal"><ion-icon name="close-outline"></ion-icon></button>
           </div>
           <div>
-            <form class="w-full px-4 mt-3" id="form-date">
-              <div>Mã lịch hẹn: <span id="lOiMajcY"></span></div>
-              <div>Thời gian gặp mặt: </div>
-              <div id="PoKauJw"></div>
+            <form class="w-full px-4 mt-3 flex flex-col gap-1" id="form-date">
+              <div>
+                Mã lịch hẹn: <span id="lOiMajcY"></span>
+            </div>
+            <div>Thời gian </div>
+            <div class="input-group ">
+              <input type="search" list="select-date" class='form-control' name="date" id="Ku8Jay" placeholder="Ngày họp">
+              <input type="search" list="select-time" name="time" id="" class="form-control" placeholder="Giờ họp">
+            </div>
+            <datalist id="select-date">
+            </datalist>
+            <datalist id='select-time'>
+            </datalist>
             </form>
             <div class="w-full flex flex-row-reverse py-3 pr-3 bg-[#b8bed1]">
               <button class="btn btn-primary" id="submit-date">Done</button>
@@ -386,10 +400,16 @@
 	</div>
   <script>
     $("#off-d").click(function() {$("#date").hide();});
+    var list_date;
+    function append(arr, id, val) {
+      if (!arr[id]) arr[id] = [];
+      arr[id].push(val);
+    }
     $("#get-table button").click(function() {
       const tr_block = $(this).closest("tr").find("td");
       $("#lOiMajcY").text(tr_block.eq(0).html());
-      $("#PoKauJw").text("");
+      $("#select-time, #select-date").text("");
+      $("#Ku8Jay, #Ku8Jay + input").val("");
       fetch(`/api/get-date?id=${tr_block.eq(0).html()}`, {method: "GET"})
       .then(async function(response) {
         if (!response.ok) {
@@ -398,7 +418,7 @@
         }
         return response.json();
       }).then(data => {
-        data.forEach((v, i) => {
+        /*data.forEach((v, i) => {
           $("#PoKauJw").append(`
           <div class="input-group my-2">
             <div class="input-group-text">
@@ -414,10 +434,30 @@
         });
         $("#PoKauJw input[type='datetime-local']").change(function() {
           this.reportValidity();
+        });*/
+        let arr = [];
+        list_date = {};
+        data.forEach((v, i) => {
+          for (let t = Date.parse(v.st); t + v.dur * 60000 <= Date.parse(v.ed); t += v.dur * 60000) {
+            append(list_date, new Date(t + 25200000).toISOString().slice(0, 10), [new Date(t + 25200000).toISOString().slice(11, 16), v.dur]);
+            //arr.push([t, v.dur]);
+          }
         });
+        for (let x in list_date) {
+          $("#select-date").append(`<option value= "${x}" ></option>`)
+        }
+        console.log(list_date);
       }).catch(err => {alert(err.message);});
 
       $("#date").show();
+    });
+
+    $("#Ku8Jay").change(function() {
+      $("#select-time").html("");
+      console.log($(this).val());
+      list_date[$(this).val()].forEach((v, i) => {
+        $("#select-time").append(`<option value= "${v[0]} - ${v[1]} phút" ></option>`)
+      });
     });
 
     $("#submit-date").click(function() {
