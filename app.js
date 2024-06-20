@@ -761,14 +761,28 @@ function shift(s, diff) {
 app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, res) {
   const data = req.body;
   console.log(data);
-  if (!(data.id && data.date)) {
+  if (!(data.id && data.date && data.time)) {
     return res.status(509).json({message: "Dữ liệu đầu vào bị thiếu"});
   }
-  if (!verify_date(data.date)) {
+  var [time, dur] = data.time.split(" - ");
+  dur = parseInt(dur);
+  const date = `${data.date}T${time}`;
+  console.log(time, dur, date);
+  if (!verify_date(date) || isNaN(dur)) {
     return res.status(509).json({message: "Thời gian không hợp lệ"});
   }
   db.serialize(async function() {
     try {
+      await new Promise((res, rej) => {
+        db.run("begin transaction", (e) => {
+          if (e) {
+            console.error("begin ", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        })
+      });
+      let cur;
       await new Promise((res, rej) => {
         db.all(`select * from date_target where idx = ? and id = ?`, [data.id, req.session.key], (e, rows) => {
           if (e) {
@@ -779,6 +793,10 @@ app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, re
             console.error("select");
             rej("Không có quyền sửa đổi");
           }
+          if (rows[0].start === date) {
+            rej("Không có sự thay đổi");
+          }
+          cur = rows[0].start;
           res();
         });
       });
@@ -790,8 +808,7 @@ app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, re
             rej("Lỗi database");
           }
           rows.forEach((x) => {
-            console.log(x, data.date);
-            if (x.start <= data.date && x.duration * 60000 <= diff(data.date, x.end) && diff(x.start, data.date) % (60000 * x.duration) === 0) {
+            if (x.start <= date && x.duration * 60000 <= diff(date, x.end) && diff(x.start, date) % (60000 * x.duration) === 0) {
               dur = x.duration;
               res();
             }
@@ -799,8 +816,73 @@ app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, re
           rej("Thời gian chọn không hợp lệ");
         });
       });
+      if (cur) {
+        let cnt = 0;
+        await new Promise((res, rej) => {
+          db.all(`select * from counter_date_book where idx = ? and date = ?`, [data.id, cur], (e, rows) => {
+            if (e) {
+              console.log("sub ", e);
+              rej("Lỗi database");
+            }
+            if (rows.length === 1) {
+              cnt = rows[0].counter - 1;
+            }
+            res();
+          });
+        });
+        console.log(cnt);
+        await new Promise((res, rej) => {
+          db.run(`update counter_date_book set counter = ? where idx = ? and date = ?`, [cnt, data.id, cur], (e) => {
+            if (e) {
+              console.log("add ", e);
+              rej("Lỗi database");
+            }
+            res();
+          });
+        });
+      }
+      {
+        let cnt = 0;
+        await new Promise((res, rej) => {
+          db.all(`select * from counter_date_book where idx = ? and date = ?`, [data.id, date], (e, rows) => {
+            if (e) {
+              console.log("sub ", e);
+              rej("Lỗi database");
+            }
+            if (rows.length === 1) {
+              cnt = rows[0].counter + 1;
+              if (cnt > 1) {
+                rej("Vượt quá giới hạn lượng người dùng đăng kí trong khung thời gian này");
+              }
+            }
+            res();
+          });
+        });
+        if (cnt > 0) {
+          await new Promise((res, rej) => {
+            db.run(`update counter_date_book set counter = ? where idx = ? and date = ?`, [cnt, data.id, date], (e) => {
+              if (e) {
+                console.log("add ", e);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+        }
+        else {
+          await new Promise((res, rej) => {
+            db.run(`insert into counter_date_book values (?, ?, ?)`, [data.id, date, 1], (e) => {
+              if (e) {
+                console.log("add ", e);
+                rej("Lỗi database");
+              }
+              res();
+            });
+          });
+        }
+      }
       await new Promise((res, rej) => {
-        db.run(`update date_target set start = ?, end = ? where idx = ? and id = ?`, [data.date, shift(data.date, dur), data.id, req.session.key], (e) => {
+        db.run(`update date_target set start = ?, end = ? where idx = ? and id = ?`, [date, shift(date, dur), data.id, req.session.key], (e) => {
           if (e) {
             console.error("update ", e);
             rej("Lỗi database");
@@ -808,9 +890,28 @@ app.post('/api/set-user-date', log_authorize, uf.upload.none(), function(req, re
           res();
         });
       });
+
+      await new Promise((sol, rej) => {
+        db.run("commit", (e) => {
+          if (e) {
+            console.error("commit ", e.message);
+            rej("Lỗi database");
+          }
+        });
+        sol();
+      });
       res.json({message: "success"});
     }
     catch (e) {
+      await new Promise((res, rej) => {
+        db.run("rollback", (e) => {
+          if (e) {
+            console.error("rollback", e.message);
+            rej("Lỗi database");
+          }
+          res();
+        });
+      });
       console.log(e);
       res.status(509).json({message: e});
     }
